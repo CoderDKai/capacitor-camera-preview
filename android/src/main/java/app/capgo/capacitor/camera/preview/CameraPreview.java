@@ -20,7 +20,6 @@ import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
-
 import androidx.annotation.RequiresPermission;
 import androidx.core.app.ActivityCompat;
 import androidx.core.graphics.Insets;
@@ -280,7 +279,9 @@ public class CameraPreview
       return;
     }
 
-    final boolean withExifLocation = Boolean.TRUE.equals(call.getBoolean("withExifLocation", false));
+    final boolean withExifLocation = Boolean.TRUE.equals(
+      call.getBoolean("withExifLocation", false)
+    );
 
     if (withExifLocation) {
       if (
@@ -307,10 +308,21 @@ public class CameraPreview
       getPermissionState(CAMERA_WITH_LOCATION_PERMISSION_ALIAS) ==
       PermissionState.GRANTED
     ) {
-        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-        getLocationAndCapture(call);
+      if (
+        ActivityCompat.checkSelfPermission(
+            getContext(),
+            Manifest.permission.ACCESS_FINE_LOCATION
+          ) !=
+          PackageManager.PERMISSION_GRANTED ||
+        ActivityCompat.checkSelfPermission(
+          getContext(),
+          Manifest.permission.ACCESS_COARSE_LOCATION
+        ) !=
+        PackageManager.PERMISSION_GRANTED
+      ) {
+        return;
+      }
+      getLocationAndCapture(call);
     } else {
       Logger.warn(
         "Location permission denied. Capturing photo without location data."
@@ -319,14 +331,19 @@ public class CameraPreview
     }
   }
 
-  @RequiresPermission(allOf = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION})
+  @RequiresPermission(
+    allOf = {
+      Manifest.permission.ACCESS_FINE_LOCATION,
+      Manifest.permission.ACCESS_COARSE_LOCATION,
+    }
+  )
   private void getLocationAndCapture(PluginCall call) {
     if (fusedLocationClient == null) {
       fusedLocationClient = LocationServices.getFusedLocationProviderClient(
         getContext()
       );
     }
-      fusedLocationClient
+    fusedLocationClient
       .getLastLocation()
       .addOnSuccessListener(getActivity(), location -> {
         lastLocation = location;
@@ -347,7 +364,9 @@ public class CameraPreview
     captureCallbackId = call.getCallbackId();
 
     Integer quality = Objects.requireNonNull(call.getInt("quality", 85));
-    final boolean saveToGallery = Boolean.TRUE.equals(call.getBoolean("saveToGallery"));
+    final boolean saveToGallery = Boolean.TRUE.equals(
+      call.getBoolean("saveToGallery")
+    );
     Integer width = call.getInt("width");
     Integer height = call.getInt("height");
 
@@ -641,8 +660,8 @@ public class CameraPreview
       return;
     }
     Float opacity = call.getFloat("opacity", 1.0f);
-      //noinspection DataFlowIssue
-      cameraXView.setOpacity(opacity);
+    //noinspection DataFlowIssue
+    cameraXView.setOpacity(opacity);
     call.resolve();
   }
 
@@ -737,8 +756,8 @@ public class CameraPreview
       (y == -1) +
       ")"
     );
-      //noinspection DataFlowIssue
-      final int width = call.getInt("width", 0);
+    //noinspection DataFlowIssue
+    final int width = call.getInt("width", 0);
     //noinspection DataFlowIssue
     final int height = call.getInt("height", 0);
     //noinspection DataFlowIssue
@@ -1745,7 +1764,10 @@ public class CameraPreview
       bridge.releaseCall(call);
       sampleCallbackId = null;
     } else {
-      Log.e("CameraPreview", "Sample taken error (no pending call): " + message);
+      Log.e(
+        "CameraPreview",
+        "Sample taken error (no pending call): " + message
+      );
     }
   }
 
@@ -1925,7 +1947,9 @@ public class CameraPreview
       return;
     }
     try {
-      java.io.File f = new java.io.File(Objects.requireNonNull(Uri.parse(path).getPath()));
+      java.io.File f = new java.io.File(
+        Objects.requireNonNull(Uri.parse(path).getPath())
+      );
       boolean deleted = f.exists() && f.delete();
       JSObject ret = new JSObject();
       ret.put("success", deleted);
@@ -2089,7 +2113,8 @@ public class CameraPreview
 
   private int getStatusBarHeightPx() {
     int result = 0;
-    @SuppressLint("InternalInsetResource") int resourceId = getContext()
+    @SuppressLint("InternalInsetResource")
+    int resourceId = getContext()
       .getResources()
       .getIdentifier("status_bar_height", "dimen", "android");
     if (resourceId > 0) {
