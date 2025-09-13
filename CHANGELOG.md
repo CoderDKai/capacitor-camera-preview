@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [7.15.0](https://github.com/Cap-go/capacitor-camera-preview/compare/7.14.9...7.15.0) (2025-09-13)
+
+
+### Features
+
+* **camera:** enhance EXIF handling and image processing with orientation adjustments ([f5ad09c](https://github.com/Cap-go/capacitor-camera-preview/commit/f5ad09c8b2036a07322f6d81491a5a55b42fc261))
+* **camera:** implement image saving to gallery with EXIF data handling ([3b5f56f](https://github.com/Cap-go/capacitor-camera-preview/commit/3b5f56f226e7c568099e0095576067944dfdbea7))
+
 ## [7.14.9](https://github.com/Cap-go/capacitor-camera-preview/compare/7.14.8...7.14.9) (2025-09-13)
 
 ## [7.14.8](https://github.com/Cap-go/capacitor-camera-preview/compare/7.14.7...7.14.8) (2025-09-12)
