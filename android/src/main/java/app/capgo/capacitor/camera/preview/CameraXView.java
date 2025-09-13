@@ -76,6 +76,7 @@ import app.capgo.capacitor.camera.preview.model.CameraSessionConfiguration;
 import app.capgo.capacitor.camera.preview.model.LensInfo;
 import app.capgo.capacitor.camera.preview.model.ZoomFactors;
 import com.google.common.util.concurrent.ListenableFuture;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -1105,9 +1106,13 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
       isCapturingPhoto = true;
     }
 
-    File tempFile = new File(context.getCacheDir(), "temp_image.jpg");
+    ByteArrayOutputStream imageStream = new ByteArrayOutputStream();
+    ImageCapture.Metadata metadata = new ImageCapture.Metadata();
+    if (location != null) {
+      metadata.setLocation(location);
+    }
     ImageCapture.OutputFileOptions outputFileOptions =
-      new ImageCapture.OutputFileOptions.Builder(tempFile).build();
+      new ImageCapture.OutputFileOptions.Builder(imageStream).setMetadata(metadata).build();
 
     imageCapture.takePicture(
       outputFileOptions,
@@ -1136,14 +1141,10 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
           @NonNull ImageCapture.OutputFileResults output
         ) {
           try {
-            // Read file using FileInputStream for compatibility
-            byte[] bytes = new byte[(int) tempFile.length()];
-            java.io.FileInputStream fis = new java.io.FileInputStream(tempFile);
-            fis.read(bytes);
-            fis.close();
+            byte[] bytes = imageStream.toByteArray();
 
             ExifInterface exifInterface = new ExifInterface(
-              tempFile.getAbsolutePath()
+              new ByteArrayInputStream(bytes)
             );
 
             if (location != null) {
@@ -1247,8 +1248,6 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
               // Backward-compatible behavior
               resultValue = Base64.encodeToString(bytes, Base64.NO_WRAP);
             }
-
-            tempFile.delete();
 
             if (listener != null) {
               listener.onPictureTaken(resultValue, exifData);
