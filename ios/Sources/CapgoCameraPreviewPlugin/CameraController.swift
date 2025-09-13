@@ -716,28 +716,6 @@ extension CameraController {
         gridOverlayView = nil
     }
 
-    func setupGestures(target: UIView, enableZoom: Bool) {
-        setupTapGesture(target: target, selector: #selector(handleTap(_:)), delegate: self)
-        if enableZoom {
-            setupPinchGesture(target: target, selector: #selector(handlePinch(_:)), delegate: self)
-        }
-    }
-
-    func setupTapGesture(target: UIView, selector: Selector, delegate: UIGestureRecognizerDelegate?) {
-        let tapGesture = UITapGestureRecognizer(target: self, action: selector)
-        tapGesture.delegate = delegate
-        target.addGestureRecognizer(tapGesture)
-    }
-
-    func setupPinchGesture(target: UIView, selector: Selector, delegate: UIGestureRecognizerDelegate?) {
-        let pinchGesture = UIPinchGestureRecognizer(target: self, action: selector)
-        pinchGesture.delegate = delegate
-        // Optimize gesture recognition for better performance
-        pinchGesture.delaysTouchesBegan = false
-        pinchGesture.delaysTouchesEnded = false
-        pinchGesture.cancelsTouchesInView = false
-        target.addGestureRecognizer(pinchGesture)
-    }
 
     func updateVideoOrientation() {
         // Get orientation in a thread-safe way

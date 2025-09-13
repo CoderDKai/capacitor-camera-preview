@@ -175,12 +175,6 @@ export interface CameraPreviewOptions {
    * @default false
    */
   enableOpacity?: boolean;
-  /**
-   * If true, enables pinch-to-zoom functionality on the preview.
-   * @platform android
-   * @default false
-   */
-  enableZoom?: boolean;
 
   /**
    * If true, disables the visual focus indicator when tapping to focus.
@@ -641,6 +635,9 @@ export interface CameraPreviewPlugin {
 
   /**
    * Sets the camera focus to a specific point in the preview.
+   *
+   * Note: The plugin does not attach any native tap-to-focus gesture handlers. Handle taps in
+   * your HTML/JS (e.g., on the overlaying UI), then pass normalized coordinates here.
    *
    * @param {Object} options - The focus options.
    * @param {number} options.x - The x coordinate in the preview view to focus on (0-1 normalized).

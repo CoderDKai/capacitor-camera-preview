@@ -1,4 +1,4 @@
-package com.ahm.capacitor.camera.preview;
+package app.capgo.capacitor.camera.preview;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -6,6 +6,8 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.View;
+
+import androidx.annotation.NonNull;
 
 public class GridOverlayView extends View {
 
@@ -62,7 +64,7 @@ public class GridOverlayView extends View {
   }
 
   @Override
-  protected void onDraw(Canvas canvas) {
+  protected void onDraw(@NonNull Canvas canvas) {
     super.onDraw(canvas);
 
     if ("none".equals(gridMode)) {

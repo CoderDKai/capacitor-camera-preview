@@ -84,6 +84,16 @@ Video and photo taken with the plugin are never removed, so do not forget to rem
 use https://capacitorjs.com/docs/apis/filesystem#deletefile for that
 
 
+## Touch & Gestures (JS‑Driven)
+
+- Native tap‑to‑focus and pinch‑to‑zoom gesture handling are intentionally disabled on both Android and iOS.
+- Handle all user interactions in your HTML/JS layer, then call the plugin methods:
+  - Focus: `await CameraPreview.setFocus({ x, y })` with normalized coordinates (0–1) relative to the preview bounds.
+  - Zoom: `await CameraPreview.setZoom({ level })` using your own gesture/UI logic.
+- Rationale: native gesture recognizers can conflict with your HTML touch handlers and block UI interactions. Keeping gestures in JS guarantees your UI receives touches as intended.
+- The `enableZoom` start option is removed. Use JS gestures + `setZoom(...)`.
+- Tip: When using `toBack: true`, the WebView is in front of the camera and receives touches; design your overlay UI there and drive focus/zoom through the JS API.
+
 ## Fast base64 from file path (no bridge)
 
 When using `storeToFile: true`, you can avoid sending large base64 strings over the Capacitor bridge:
@@ -784,6 +794,9 @@ setFocus(options: { x: number; y: number; }) => Promise<void>
 
 Sets the camera focus to a specific point in the preview.
 
+Note: The plugin does not attach any native tap-to-focus gesture handlers. Handle taps in
+your HTML/JS (e.g., on the overlaying UI), then pass normalized coordinates here.
+
 | Param         | Type                                   | Description          |
 | ------------- | -------------------------------------- | -------------------- |
 | **`options`** | <code>{ x: number; y: number; }</code> | - The focus options. |
@@ -999,7 +1012,6 @@ Defines the configuration options for starting the camera preview.
 | **`disableAudio`**                 | <code>boolean</code>                                            | If true, disables the audio stream, preventing audio permission requests.                                                                                                                               | <code>true</code>     |        |
 | **`lockAndroidOrientation`**       | <code>boolean</code>                                            | If true, locks the device orientation while the camera is active.                                                                                                                                       | <code>false</code>    |        |
 | **`enableOpacity`**                | <code>boolean</code>                                            | If true, allows the camera preview's opacity to be changed.                                                                                                                                             | <code>false</code>    |        |
-| **`enableZoom`**                   | <code>boolean</code>                                            | If true, enables pinch-to-zoom functionality on the preview.                                                                                                                                            | <code>false</code>    |        |
 | **`disableFocusIndicator`**        | <code>boolean</code>                                            | If true, disables the visual focus indicator when tapping to focus.                                                                                                                                     | <code>false</code>    |        |
 | **`deviceId`**                     | <code>string</code>                                             | The `deviceId` of the camera to use. If provided, `position` is ignored.                                                                                                                                |                       |        |
 | **`initialZoomLevel`**             | <code>number</code>                                             | The initial zoom level when starting the camera preview. If the requested zoom level is not available, the native plugin will reject.                                                                   | <code>1.0</code>      | 2.2.0  |

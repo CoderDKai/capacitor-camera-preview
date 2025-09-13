@@ -115,7 +115,6 @@ export class CameraViewPage implements OnInit {
 
   // Camera behavior settings
   protected opacity = model<number>(100);
-  protected enableZoom = model<boolean>(false);
   protected disableAudio = model<boolean>(true);
   protected lockAndroidOrientation = model<boolean>(false);
   protected saveToGallery = model<boolean>(false);
@@ -305,7 +304,6 @@ export class CameraViewPage implements OnInit {
         pictureWidth: this.pictureWidth(),
         pictureHeight: this.pictureHeight(),
         opacity: this.opacity(),
-        enableZoom: this.enableZoom(),
         disableAudio: this.disableAudio(),
         lockAndroidOrientation: this.lockAndroidOrientation(),
         saveToGallery: this.saveToGallery(),
@@ -518,7 +516,6 @@ export class CameraViewPage implements OnInit {
   protected async quickTestVideo(): Promise<void> {
     // Set optimal settings for video
     this.disableAudio.set(false);
-    this.enableZoom.set(true);
     this.opacity.set(100);
     await this.startCamera();
   }

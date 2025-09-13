@@ -91,7 +91,6 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDelega
     var rotateWhenOrientationChanged: Bool?
     var toBack: Bool?
     var storeToFile: Bool?
-    var enableZoom: Bool?
     var disableAudio: Bool = false
     var disableFocusIndicator: Bool = false
     var locationManager: CLLocationManager?
@@ -505,7 +504,6 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDelega
         print("  - rotateWhenOrientationChanged: \(call.getBool("rotateWhenOrientationChanged") ?? true)")
         print("  - toBack: \(call.getBool("toBack") ?? true)")
         print("  - storeToFile: \(call.getBool("storeToFile") ?? false)")
-        print("  - enableZoom: \(call.getBool("enableZoom") ?? false)")
         print("  - disableAudio: \(call.getBool("disableAudio") ?? true)")
         print("  - aspectRatio: \(call.getString("aspectRatio") ?? "4:3")")
         print("  - gridMode: \(call.getString("gridMode") ?? "none")")
@@ -566,7 +564,6 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDelega
         self.rotateWhenOrientationChanged = call.getBool("rotateWhenOrientationChanged") ?? true
         self.toBack = call.getBool("toBack") ?? true
         self.storeToFile = call.getBool("storeToFile") ?? false
-        self.enableZoom = call.getBool("enableZoom") ?? false
         self.disableAudio = call.getBool("disableAudio") ?? true
         // Default to 4:3 aspect ratio if not provided
         self.aspectRatio = call.getString("aspectRatio") ?? "4:3"
@@ -637,8 +634,7 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDelega
 
         // Configure preview layer - it's already hidden from CameraController
         try? self.cameraController.displayPreview(on: self.previewView)
-        // Setup gestures
-        self.cameraController.setupGestures(target: self.previewView, enableZoom: self.enableZoom!)
+        // Do not attach native gestures; focus/zoom are controlled from JS for parity
 
         // Add grid overlay if enabled
         if self.gridMode != "none" {

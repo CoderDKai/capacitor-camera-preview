@@ -1,4 +1,4 @@
-package com.ahm.capacitor.camera.preview.model;
+package app.capgo.capacitor.camera.preview.model;
 
 import java.util.List;
 

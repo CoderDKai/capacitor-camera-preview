@@ -1,4 +1,4 @@
-package com.ahm.capacitor.camera.preview.model;
+package app.capgo.capacitor.camera.preview.model;
 
 /**
  * Configuration for a camera session.
@@ -15,7 +15,6 @@ public class CameraSessionConfiguration {
   private final boolean toBack;
   private final boolean storeToFile;
   private final boolean enableOpacity;
-  private final boolean enableZoom;
   private final boolean disableExifHeaderStripping;
   private final boolean disableAudio;
   private final float zoomFactor;
@@ -37,7 +36,6 @@ public class CameraSessionConfiguration {
     boolean toBack,
     boolean storeToFile,
     boolean enableOpacity,
-    boolean enableZoom,
     boolean disableExifHeaderStripping,
     boolean disableAudio,
     float zoomFactor,
@@ -56,7 +54,6 @@ public class CameraSessionConfiguration {
     this.toBack = toBack;
     this.storeToFile = storeToFile;
     this.enableOpacity = enableOpacity;
-    this.enableZoom = enableZoom;
     this.disableExifHeaderStripping = disableExifHeaderStripping;
     this.disableAudio = disableAudio;
     this.zoomFactor = zoomFactor;
@@ -114,10 +111,6 @@ public class CameraSessionConfiguration {
     return enableOpacity;
   }
 
-  public boolean isEnableZoom() {
-    return enableZoom;
-  }
-
   public boolean isDisableExifHeaderStripping() {
     return disableExifHeaderStripping;
   }
@@ -149,10 +142,6 @@ public class CameraSessionConfiguration {
 
   public boolean getEnableOpacity() {
     return enableOpacity;
-  }
-
-  public boolean getEnableZoom() {
-    return enableZoom;
   }
 
   public boolean getDisableExifHeaderStripping() {

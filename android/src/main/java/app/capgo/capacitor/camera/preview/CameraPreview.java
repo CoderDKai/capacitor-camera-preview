@@ -1,15 +1,18 @@
-package com.ahm.capacitor.camera.preview;
+package app.capgo.capacitor.camera.preview;
 
 import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.RECORD_AUDIO;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.net.Uri;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Size;
@@ -17,13 +20,16 @@ import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
+
+import androidx.annotation.RequiresPermission;
+import androidx.core.app.ActivityCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import com.ahm.capacitor.camera.preview.model.CameraDevice;
-import com.ahm.capacitor.camera.preview.model.CameraSessionConfiguration;
-import com.ahm.capacitor.camera.preview.model.LensInfo;
-import com.ahm.capacitor.camera.preview.model.ZoomFactors;
+import app.capgo.capacitor.camera.preview.model.CameraDevice;
+import app.capgo.capacitor.camera.preview.model.CameraSessionConfiguration;
+import app.capgo.capacitor.camera.preview.model.LensInfo;
+import app.capgo.capacitor.camera.preview.model.ZoomFactors;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Logger;
@@ -107,7 +113,7 @@ public class CameraPreview
     "cameraWithLocation";
 
   private String captureCallbackId = "";
-  private String snapshotCallbackId = "";
+  private String sampleCallbackId = "";
   private String cameraStartCallbackId = "";
   private int previousOrientationRequest =
     ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED;
@@ -266,6 +272,7 @@ public class CameraPreview
     call.resolve();
   }
 
+  @SuppressLint("MissingPermission")
   @PluginMethod
   public void capture(final PluginCall call) {
     if (cameraXView == null || !cameraXView.isRunning()) {
@@ -273,7 +280,7 @@ public class CameraPreview
       return;
     }
 
-    final boolean withExifLocation = call.getBoolean("withExifLocation", false);
+    final boolean withExifLocation = Boolean.TRUE.equals(call.getBoolean("withExifLocation", false));
 
     if (withExifLocation) {
       if (
@@ -293,13 +300,17 @@ public class CameraPreview
     }
   }
 
+  @SuppressLint("MissingPermission")
   @PermissionCallback
   private void captureWithLocationPermission(PluginCall call) {
     if (
       getPermissionState(CAMERA_WITH_LOCATION_PERMISSION_ALIAS) ==
       PermissionState.GRANTED
     ) {
-      getLocationAndCapture(call);
+        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        getLocationAndCapture(call);
     } else {
       Logger.warn(
         "Location permission denied. Capturing photo without location data."
@@ -308,13 +319,14 @@ public class CameraPreview
     }
   }
 
+  @RequiresPermission(allOf = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION})
   private void getLocationAndCapture(PluginCall call) {
     if (fusedLocationClient == null) {
       fusedLocationClient = LocationServices.getFusedLocationProviderClient(
         getContext()
       );
     }
-    fusedLocationClient
+      fusedLocationClient
       .getLastLocation()
       .addOnSuccessListener(getActivity(), location -> {
         lastLocation = location;
@@ -335,7 +347,7 @@ public class CameraPreview
     captureCallbackId = call.getCallbackId();
 
     Integer quality = Objects.requireNonNull(call.getInt("quality", 85));
-    final boolean saveToGallery = call.getBoolean("saveToGallery", false);
+    final boolean saveToGallery = Boolean.TRUE.equals(call.getBoolean("saveToGallery"));
     Integer width = call.getInt("width");
     Integer height = call.getInt("height");
 
@@ -349,7 +361,7 @@ public class CameraPreview
       return;
     }
     bridge.saveCall(call);
-    snapshotCallbackId = call.getCallbackId();
+    sampleCallbackId = call.getCallbackId();
     Integer quality = Objects.requireNonNull(call.getInt("quality", 85));
     cameraXView.captureSample(quality);
   }
@@ -442,7 +454,7 @@ public class CameraPreview
       deviceJson.put("label", device.getLabel());
       deviceJson.put("position", device.getPosition());
       JSArray lensesArray = new JSArray();
-      for (com.ahm.capacitor.camera.preview.model.LensInfo lens : device.getLenses()) {
+      for (app.capgo.capacitor.camera.preview.model.LensInfo lens : device.getLenses()) {
         JSObject lensJson = new JSObject();
         lensJson.put("focalLength", lens.getFocalLength());
         lensJson.put("deviceType", lens.getDeviceType());
@@ -496,7 +508,7 @@ public class CameraPreview
       float minUltra = 0.5f;
 
       for (CameraDevice device : devices) {
-        for (com.ahm.capacitor.camera.preview.model.LensInfo lens : device.getLenses()) {
+        for (app.capgo.capacitor.camera.preview.model.LensInfo lens : device.getLenses()) {
           if ("ultraWide".equals(lens.getDeviceType())) {
             hasUltraWide = true;
             // Use overall minZoom for that device as the button value to represent UW
@@ -629,7 +641,8 @@ public class CameraPreview
       return;
     }
     Float opacity = call.getFloat("opacity", 1.0f);
-    cameraXView.setOpacity(opacity);
+      //noinspection DataFlowIssue
+      cameraXView.setOpacity(opacity);
     call.resolve();
   }
 
@@ -724,8 +737,11 @@ public class CameraPreview
       (y == -1) +
       ")"
     );
-    final int width = call.getInt("width", 0);
+      //noinspection DataFlowIssue
+      final int width = call.getInt("width", 0);
+    //noinspection DataFlowIssue
     final int height = call.getInt("height", 0);
+    //noinspection DataFlowIssue
     final int paddingBottom = call.getInt("paddingBottom", 0);
     final boolean toBack = Boolean.TRUE.equals(call.getBoolean("toBack", true));
     final boolean storeToFile = Boolean.TRUE.equals(
@@ -733,9 +749,6 @@ public class CameraPreview
     );
     final boolean enableOpacity = Boolean.TRUE.equals(
       call.getBoolean("enableOpacity", false)
-    );
-    final boolean enableZoom = Boolean.TRUE.equals(
-      call.getBoolean("enableZoom", false)
     );
     final boolean disableExifHeaderStripping = Boolean.TRUE.equals(
       call.getBoolean("disableExifHeaderStripping", false)
@@ -750,7 +763,9 @@ public class CameraPreview
     final String aspectRatio = call.getString("aspectRatio", "4:3");
     final String gridMode = call.getString("gridMode", "none");
     final String positioning = call.getString("positioning", "top");
+    //noinspection DataFlowIssue
     final float initialZoomLevel = call.getFloat("initialZoomLevel", 1.0f);
+    //noinspection DataFlowIssue
     final boolean disableFocusIndicator = call.getBoolean(
       "disableFocusIndicator",
       false
@@ -1014,7 +1029,7 @@ public class CameraPreview
           // Position vertically based on positioning parameter
           int screenHeight = metrics.heightPixels;
 
-          switch (positioning) {
+          switch (Objects.requireNonNull(positioning)) {
             case "top":
               computedY = 0;
               Log.d("CameraPreview", "Positioning at top: computedY=0");
@@ -1181,7 +1196,6 @@ public class CameraPreview
           toBack,
           storeToFile,
           enableOpacity,
-          enableZoom,
           disableExifHeaderStripping,
           disableAudio,
           1.0f,
@@ -1711,14 +1725,28 @@ public class CameraPreview
 
   @Override
   public void onSampleTaken(String result) {
-    // Handle sample taken if needed
-    Log.i("CameraPreview", "Sample taken: " + result);
+    PluginCall call = bridge.getSavedCall(sampleCallbackId);
+    if (call != null) {
+      JSObject ret = new JSObject();
+      ret.put("value", result);
+      call.resolve(ret);
+      bridge.releaseCall(call);
+      sampleCallbackId = null;
+    } else {
+      Log.w("CameraPreview", "onSampleTaken: no pending call to resolve");
+    }
   }
 
   @Override
   public void onSampleTakenError(String message) {
-    // Handle sample taken error if needed
-    Log.e("CameraPreview", "Sample taken error: " + message);
+    PluginCall call = bridge.getSavedCall(sampleCallbackId);
+    if (call != null) {
+      call.reject(message);
+      bridge.releaseCall(call);
+      sampleCallbackId = null;
+    } else {
+      Log.e("CameraPreview", "Sample taken error (no pending call): " + message);
+    }
   }
 
   @Override
@@ -1897,7 +1925,7 @@ public class CameraPreview
       return;
     }
     try {
-      java.io.File f = new java.io.File(android.net.Uri.parse(path).getPath());
+      java.io.File f = new java.io.File(Objects.requireNonNull(Uri.parse(path).getPath()));
       boolean deleted = f.exists() && f.delete();
       JSObject ret = new JSObject();
       ret.put("success", deleted);
@@ -2031,20 +2059,9 @@ public class CameraPreview
         if (orientation == Configuration.ORIENTATION_PORTRAIT) {
           // Portrait: return top inset (notch/status bar)
           notchInsetPx = Math.max(cutout.top, sysBars.top);
-
-          // If no cutout detected but we have system bars, use status bar height as fallback
-          if (cutout.top == 0 && sysBars.top > 0) {
-            notchInsetPx = sysBars.top;
-          }
         } else if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
           // Landscape: return left inset (notch moved to side)
           notchInsetPx = Math.max(cutout.left, sysBars.left);
-
-          // If no cutout detected but we have system bars, use left system bar as fallback
-          if (cutout.left == 0 && sysBars.left > 0) {
-            notchInsetPx = sysBars.left;
-          }
-
           // Additional fallback: some devices might have the notch on the right in landscape
           // If left is 0, check right side as well
           if (notchInsetPx == 0) {
@@ -2070,26 +2087,11 @@ public class CameraPreview
     call.resolve(ret);
   }
 
-  private boolean approxEqualPx(int a, int b) {
-    return Math.abs(a - b) <= 2; // within 2px tolerance
-  }
-
   private int getStatusBarHeightPx() {
     int result = 0;
-    int resourceId = getContext()
+    @SuppressLint("InternalInsetResource") int resourceId = getContext()
       .getResources()
       .getIdentifier("status_bar_height", "dimen", "android");
-    if (resourceId > 0) {
-      result = getContext().getResources().getDimensionPixelSize(resourceId);
-    }
-    return result;
-  }
-
-  private int getNavigationBarHeightPx() {
-    int result = 0;
-    int resourceId = getContext()
-      .getResources()
-      .getIdentifier("navigation_bar_height", "dimen", "android");
     if (resourceId > 0) {
       result = getContext().getResources().getDimensionPixelSize(resourceId);
     }
