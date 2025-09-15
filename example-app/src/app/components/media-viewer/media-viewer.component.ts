@@ -1,4 +1,5 @@
 import { Component, inject, input, ElementRef } from '@angular/core';
+import { JsonPipe } from '@angular/common';
 import { IonContent, IonHeader, IonToolbar, IonButtons, IonButton, IonIcon, GestureController } from '@ionic/angular/standalone';
 import { ModalController } from '@ionic/angular/standalone';
 import { MediaItem } from '../../services/gallery.service';
@@ -9,6 +10,7 @@ import { Gesture } from '@ionic/core';
   templateUrl: './media-viewer.component.html',
   styleUrls: ['./media-viewer.component.scss'],
   imports: [
+    JsonPipe,
     IonContent,
     IonHeader,
     IonToolbar,

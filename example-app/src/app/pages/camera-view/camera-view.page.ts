@@ -332,7 +332,7 @@ export class CameraViewPage implements OnInit {
     }
 
     if (data?.photo) {
-      this.#galleryService.addPhoto(data?.photo);
+      this.#galleryService.addPhoto(data?.photo, data?.exif as any);
       let results = this.testResults() + `\n✓ Photo captured successfully`;
       if (data.type) {
         results += ` (${data.type})`;

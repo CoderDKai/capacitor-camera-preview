@@ -1,11 +1,14 @@
 import { Injectable, computed, signal, inject } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { CapacitorCameraViewService } from '../core/capacitor-camera-preview.service';
+import * as exifr from 'exifr';
 
 export interface MediaItem {
   src: string;
   type: 'photo' | 'video';
   timestamp: number;
+  exifReturned?: Record<string, any>;
+  exifParsed?: Record<string, any>;
 }
 
 @Injectable({
@@ -24,7 +27,7 @@ export class GalleryService {
     this.#mediaItems().filter(item => item.type === 'video')
   );
 
-  public async addPhoto(photo: string) {
+  public async addPhoto(photo: string, exifReturned?: Record<string, any>) {
     let src = photo;
     if (photo.startsWith('data:')) {
       // already a data URL
@@ -43,11 +46,37 @@ export class GalleryService {
       src = `data:image/jpeg;base64,${photo}`;
     }
 
-    this.#mediaItems.update((curr) => [...curr, {
-      src,
-      type: 'photo',
-      timestamp: Date.now()
-    }]);
+    let exifParsed: Record<string, any> | undefined = undefined;
+    try {
+      let buf: ArrayBuffer;
+      if (src.startsWith('data:image/')) {
+        // Decode base64 data URL manually to avoid fetch() inconsistencies on WebView
+        const b64 = src.substring(src.indexOf(',') + 1);
+        const binary = atob(b64);
+        const len = binary.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+        buf = bytes.buffer;
+      } else {
+        const resp = await fetch(src);
+        const blob = await resp.blob();
+        buf = await blob.arrayBuffer();
+      }
+      exifParsed = (await (exifr as any).parse(buf)) ?? undefined;
+    } catch (e) {
+      console.warn('Failed to parse EXIF from bytes', e);
+    }
+
+    this.#mediaItems.update((curr) => [
+      ...curr,
+      {
+        src,
+        type: 'photo',
+        timestamp: Date.now(),
+        exifReturned,
+        exifParsed,
+      },
+    ]);
   }
 
   public async addVideo(videoPath: string, videoData?: string) {

@@ -62,4 +62,31 @@
       opacity: 0;
     }
   }
+
+  .exif-panel {
+    position: absolute;
+    bottom: 60px;
+    left: 12px;
+    right: 12px;
+    max-height: 40vh;
+    overflow: auto;
+    background: rgba(0, 0, 0, 0.6);
+    color: #e8e8e8;
+    border-radius: 8px;
+    padding: 8px 10px;
+    backdrop-filter: blur(4px);
+  }
+
+  .exif-title {
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .exif-json {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+    font-size: 12px;
+  }
 }
