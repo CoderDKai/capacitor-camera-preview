@@ -1319,7 +1319,7 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
                 originalCaptureBytes,
                 fW,
                 fH,
-                /*normalizeOrientation*/ true
+                /*normalizeOrientation*/true
               );
             }
 
@@ -1512,8 +1512,9 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
 
       // Use Commons Imaging to read EXIF from the original capture bytes
       org.apache.commons.imaging.formats.jpeg.JpegImageMetadata jpegMetadata =
-        (org.apache.commons.imaging.formats.jpeg.JpegImageMetadata)
-          org.apache.commons.imaging.Imaging.getMetadata(sourceJpegWithExif);
+        (org.apache.commons.imaging.formats.jpeg.JpegImageMetadata) org.apache.commons.imaging.Imaging.getMetadata(
+          sourceJpegWithExif
+        );
       org.apache.commons.imaging.formats.tiff.TiffImageMetadata exif =
         jpegMetadata != null ? jpegMetadata.getExif() : null;
 
