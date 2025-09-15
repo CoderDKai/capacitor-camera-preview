@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [7.16.2](https://github.com/Cap-go/capacitor-camera-preview/compare/7.16.1...7.16.2) (2025-09-15)
+
+
+### Bug Fixes
+
+* **deps:** update angular monorepo to v19.2.15 ([2753110](https://github.com/Cap-go/capacitor-camera-preview/commit/27531103ecfa90e99d48fb08951ee0df44ffce45))
+* **deps:** update camerax_version to v1.5.0 ([3669e11](https://github.com/Cap-go/capacitor-camera-preview/commit/3669e1152fd2aceb62634b2860f15e0aae028964))
+
 ## [7.16.1](https://github.com/Cap-go/capacitor-camera-preview/compare/7.16.0...7.16.1) (2025-09-15)
 
 ## [7.16.0](https://github.com/Cap-go/capacitor-camera-preview/compare/7.15.0...7.16.0) (2025-09-15)
