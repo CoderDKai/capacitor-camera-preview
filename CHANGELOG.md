@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [7.16.0](https://github.com/Cap-go/capacitor-camera-preview/compare/7.15.0...7.16.0) (2025-09-15)
+
+
+### Features
+
+* **camera:** enhance EXIF handling and in-memory processing with new dependencies ([229d97e](https://github.com/Cap-go/capacitor-camera-preview/commit/229d97ea39d6c7bdbb9903e8a3205d5667c0b7e8))
+* **icons:** add chevronDownOutline icon to the icon set ([0cf9d77](https://github.com/Cap-go/capacitor-camera-preview/commit/0cf9d7794a619eb2baf7777d8d0f7cb13a4eee98))
+
+
+### Bug Fixes
+
+* **strings:** update app name and title to 'Camera app test' ([577608e](https://github.com/Cap-go/capacitor-camera-preview/commit/577608e001b9cbf21dd481d96aebad21c55b6eb0))
+
 ## [7.15.0](https://github.com/Cap-go/capacitor-camera-preview/compare/7.14.9...7.15.0) (2025-09-13)
 
 
