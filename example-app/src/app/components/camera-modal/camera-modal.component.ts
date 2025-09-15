@@ -498,8 +498,8 @@ export class CameraModalComponent implements OnInit, OnDestroy {
         captureOptions,
       );
 
-      // Add to gallery first
-      await this.#galleryService.addPhoto(value);
+      // Add to gallery first (include EXIF)
+      await this.#galleryService.addPhoto(value, exif as any);
 
       // Then dismiss the modal
       await this.#modalController.dismiss({

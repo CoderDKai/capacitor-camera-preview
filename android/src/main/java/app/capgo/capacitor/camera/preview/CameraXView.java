@@ -359,47 +359,7 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
       fos.flush();
       fos.close();
 
-      // If JPEG and we have source EXIF, copy EXIF tags into the saved file
-      if ("image/jpeg".equals(mimeType) && sourceExif != null) {
-        try {
-          ExifInterface newExif = new ExifInterface(photo.getAbsolutePath());
-          for (String[] tag : EXIF_TAGS) {
-            String value = sourceExif.getAttribute(tag[0]);
-            if (value != null) newExif.setAttribute(tag[0], value);
-          }
-          // Normalize orientation for recompressed pixels
-          newExif.setAttribute(
-            ExifInterface.TAG_ORIENTATION,
-            Integer.toString(ExifInterface.ORIENTATION_NORMAL)
-          );
-          if (
-            finalWidth != null &&
-            finalHeight != null &&
-            finalWidth > 0 &&
-            finalHeight > 0
-          ) {
-            newExif.setAttribute(
-              ExifInterface.TAG_PIXEL_X_DIMENSION,
-              String.valueOf(finalWidth)
-            );
-            newExif.setAttribute(
-              ExifInterface.TAG_PIXEL_Y_DIMENSION,
-              String.valueOf(finalHeight)
-            );
-            newExif.setAttribute(
-              ExifInterface.TAG_IMAGE_WIDTH,
-              String.valueOf(finalWidth)
-            );
-            newExif.setAttribute(
-              ExifInterface.TAG_IMAGE_LENGTH,
-              String.valueOf(finalHeight)
-            );
-          }
-          newExif.saveAttributes();
-        } catch (Exception ex) {
-          Log.w(TAG, "Failed to write EXIF to saved gallery image", ex);
-        }
-      }
+      // No EXIF rewrite here; bytes already contain EXIF when needed
 
       // Notify the gallery of the new image
       MediaScannerConnection.scanFile(
@@ -1269,21 +1229,23 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
           @NonNull ImageCapture.OutputFileResults output
         ) {
           try {
-            byte[] bytes = imageStream.toByteArray();
+            byte[] originalCaptureBytes = imageStream.toByteArray();
+            byte[] bytes = originalCaptureBytes; // will be replaced if we transform
             int finalWidthOut = -1;
             int finalHeightOut = -1;
+            boolean transformedPixels = false;
 
             ExifInterface exifInterface = new ExifInterface(
-              new ByteArrayInputStream(bytes)
+              new ByteArrayInputStream(originalCaptureBytes)
             );
             // Build EXIF JSON from captured bytes (location applied by metadata if provided)
             JSONObject exifData = getExifData(exifInterface);
 
             if (width != null || height != null) {
               Bitmap bitmap = BitmapFactory.decodeByteArray(
-                bytes,
+                originalCaptureBytes,
                 0,
-                bytes.length
+                originalCaptureBytes.length
               );
               bitmap = applyExifOrientation(bitmap, exifInterface);
               Bitmap resizedBitmap = resizeBitmapToMaxDimensions(
@@ -1298,6 +1260,7 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
                 stream
               );
               bytes = stream.toByteArray();
+              transformedPixels = true;
 
               // Update EXIF JSON to reflect new dimensions; no in-place EXIF write to bytes
               try {
@@ -1315,9 +1278,9 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
             } else {
               // No explicit size/ratio: crop to match current preview content
               Bitmap originalBitmap = BitmapFactory.decodeByteArray(
-                bytes,
+                originalCaptureBytes,
                 0,
-                bytes.length
+                originalCaptureBytes.length
               );
               originalBitmap = applyExifOrientation(
                 originalBitmap,
@@ -1331,6 +1294,7 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
                 stream
               );
               bytes = stream.toByteArray();
+              transformedPixels = true;
               // Update EXIF JSON to reflect cropped dimensions; no in-place EXIF write to bytes
               try {
                 exifData.put("PixelXDimension", previewCropped.getWidth());
@@ -1344,6 +1308,19 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
               } catch (Exception ignore) {}
               finalWidthOut = previewCropped.getWidth();
               finalHeightOut = previewCropped.getHeight();
+            }
+
+            // After any transform, inject EXIF back into the in-memory JPEG bytes (no temp file)
+            if (transformedPixels) {
+              Integer fW = (finalWidthOut > 0) ? finalWidthOut : null;
+              Integer fH = (finalHeightOut > 0) ? finalHeightOut : null;
+              bytes = injectExifInMemory(
+                bytes,
+                originalCaptureBytes,
+                fW,
+                fH,
+                /*normalizeOrientation*/ true
+              );
             }
 
             // Save to gallery asynchronously if requested, copy EXIF to file
@@ -1375,41 +1352,7 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
                 outFos.write(bytes);
                 outFos.close();
 
-                // Write EXIF into the saved file
-                try {
-                  ExifInterface newExif = new ExifInterface(
-                    outFile.getAbsolutePath()
-                  );
-                  for (String[] tag : EXIF_TAGS) {
-                    String value = exifInterface.getAttribute(tag[0]);
-                    if (value != null) newExif.setAttribute(tag[0], value);
-                  }
-                  newExif.setAttribute(
-                    ExifInterface.TAG_ORIENTATION,
-                    Integer.toString(ExifInterface.ORIENTATION_NORMAL)
-                  );
-                  if (finalWidthOut > 0 && finalHeightOut > 0) {
-                    newExif.setAttribute(
-                      ExifInterface.TAG_PIXEL_X_DIMENSION,
-                      String.valueOf(finalWidthOut)
-                    );
-                    newExif.setAttribute(
-                      ExifInterface.TAG_PIXEL_Y_DIMENSION,
-                      String.valueOf(finalHeightOut)
-                    );
-                    newExif.setAttribute(
-                      ExifInterface.TAG_IMAGE_WIDTH,
-                      String.valueOf(finalWidthOut)
-                    );
-                    newExif.setAttribute(
-                      ExifInterface.TAG_IMAGE_LENGTH,
-                      String.valueOf(finalHeightOut)
-                    );
-                  }
-                  newExif.saveAttributes();
-                } catch (Exception ex) {
-                  Log.w(TAG, "Failed to embed EXIF into output file", ex);
-                }
+                // No EXIF rewrite here; bytes already contain EXIF when needed
 
                 // Return a file path; apps can convert via Capacitor.convertFileSrc on JS side
                 resultValue = outFile.getAbsolutePath();
@@ -1544,6 +1487,68 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
       Log.e(TAG, "getExifData: Error reading exif data", e);
     }
     return exifData;
+  }
+
+  // Inject EXIF into a JPEG byte[] fully in-memory using Apache Commons Imaging (no temp files)
+  // Copies EXIF from sourceJpeg (original capture) and updates orientation/dimensions if provided.
+  private byte[] injectExifInMemory(
+    byte[] targetJpeg,
+    byte[] sourceJpegWithExif,
+    Integer finalWidth,
+    Integer finalHeight,
+    boolean normalizeOrientation
+  ) {
+    try {
+      // Quick signature check for JPEG (FF D8 FF)
+      if (
+        targetJpeg == null ||
+        targetJpeg.length < 3 ||
+        (targetJpeg[0] & 0xFF) != 0xFF ||
+        (targetJpeg[1] & 0xFF) != 0xD8 ||
+        (targetJpeg[2] & 0xFF) != 0xFF
+      ) {
+        return targetJpeg; // Not a JPEG; nothing to do
+      }
+
+      // Use Commons Imaging to read EXIF from the original capture bytes
+      org.apache.commons.imaging.formats.jpeg.JpegImageMetadata jpegMetadata =
+        (org.apache.commons.imaging.formats.jpeg.JpegImageMetadata)
+          org.apache.commons.imaging.Imaging.getMetadata(sourceJpegWithExif);
+      org.apache.commons.imaging.formats.tiff.TiffImageMetadata exif =
+        jpegMetadata != null ? jpegMetadata.getExif() : null;
+
+      org.apache.commons.imaging.formats.tiff.write.TiffOutputSet outputSet =
+        exif != null
+          ? exif.getOutputSet()
+          : new org.apache.commons.imaging.formats.tiff.write.TiffOutputSet();
+
+      // Update orientation if requested (normalize to 1)
+      if (normalizeOrientation) {
+        org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory rootDir =
+          outputSet.getOrCreateRootDirectory();
+        rootDir.removeField(
+          org.apache.commons.imaging.formats.tiff.constants.TiffTagConstants.TIFF_TAG_ORIENTATION
+        );
+        rootDir.add(
+          org.apache.commons.imaging.formats.tiff.constants.TiffTagConstants.TIFF_TAG_ORIENTATION,
+          (short) 1
+        );
+      }
+
+      // Optionally update dimensions here. Skipped to maximize compatibility with Commons Imaging 1.0-alpha3.
+
+      java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+      new org.apache.commons.imaging.formats.jpeg.exif.ExifRewriter()
+        .updateExifMetadataLossless(
+          new java.io.ByteArrayInputStream(targetJpeg),
+          out,
+          outputSet
+        );
+      return out.toByteArray();
+    } catch (Throwable t) {
+      Log.w(TAG, "injectExifInMemory: Failed to write EXIF in memory", t);
+      return targetJpeg; // Fallback: return original bytes
+    }
   }
 
   private static final String[][] EXIF_TAGS = new String[][] {
