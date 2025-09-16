@@ -1018,15 +1018,15 @@ extension CameraController {
 
         // Bubble rect (top-right)
         let bgSize  = CGSize(width: textSize.width + paddingH * 2,
-                            height: textSize.height + paddingV * 2)
+                             height: textSize.height + paddingV * 2)
         let margin: CGFloat = 12 // distance from edges of the photo
         let bgOrigin = CGPoint(x: size.width - bgSize.width - margin,
-                            y: margin)
+                               y: margin)
         let bgRect = CGRect(origin: bgOrigin, size: bgSize)
 
         // Text origin inside bubble
         let textOrigin = CGPoint(x: bgRect.minX + paddingH,
-                                y: bgRect.minY + paddingV)
+                                 y: bgRect.minY + paddingV)
 
         let format = UIGraphicsImageRendererFormat.default()
         format.scale = scale
@@ -1081,8 +1081,8 @@ extension CameraController {
             raw = extractDateString(from: metadata)
         }
         if raw == nil, let data = photoData,
-        let src = CGImageSourceCreateWithData(data as CFData, nil),
-        let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [String: Any] {
+           let src = CGImageSourceCreateWithData(data as CFData, nil),
+           let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [String: Any] {
             raw = extractDateString(from: props)
         }
 
@@ -1121,7 +1121,7 @@ extension CameraController {
         let cgSrc = CGImageSourceCreateWithData(srcData as CFData, nil)
         let baseMetadata: [String: Any]
         if let src = cgSrc,
-        let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [String: Any] {
+           let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [String: Any] {
             var merged = props
             if let explicit = originalMetadata as? [String: Any] {
                 for (k, v) in explicit { merged[k] = v }
