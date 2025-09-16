@@ -1,6 +1,7 @@
 import AVFoundation
 import UIKit
 import CoreLocation
+import UniformTypeIdentifiers
 
 class CameraController: NSObject {
     private func getVideoOrientation() -> AVCaptureVideoOrientation {
@@ -888,7 +889,7 @@ extension CameraController {
         self.updateVideoOrientation()
     }
 
-    func captureImage(width: Int?, height: Int?, quality: Float, gpsLocation: CLLocation?, completion: @escaping (UIImage?, Data?, [AnyHashable: Any]?, Error?) -> Void) {
+    func captureImage(width: Int?, height: Int?, quality: Float, gpsLocation: CLLocation?, embedTimestamp: Bool, completion: @escaping (UIImage?, Data?, [AnyHashable: Any]?, Error?) -> Void) {
         guard let photoOutput = self.photoOutput else {
             completion(nil, nil, nil, NSError(domain: "Camera", code: 0, userInfo: [NSLocalizedDescriptionKey: "Photo output is not available"]))
             return
@@ -972,7 +973,14 @@ extension CameraController {
                 print("[CameraPreview] Applied aspect ratio cropping for \(aspectRatio): \(finalImage.size.width)x\(finalImage.size.height)")
             }
 
+            // Embed timestamp if requested
+            if embedTimestamp {
+                let when = self.makeTimestampString(from: photoData, metadata: metadata)
+                finalImage = self.drawTimestamp(text: when, on: finalImage)
+            }
+
             completion(finalImage, photoData, metadata, nil)
+
             // End capture lifecycle
             self.isCapturingPhoto = false
             if self.stopRequestedAfterCapture {
@@ -981,6 +989,172 @@ extension CameraController {
         }
 
         photoOutput.capturePhoto(with: settings, delegate: self)
+    }
+
+    /// Draws a timestamp bubble at the top-right of the image and returns a new image.
+    func drawTimestamp(text: String, on image: UIImage) -> UIImage {
+        let textColor: UIColor = .white
+        // Slightly lighter/clearer than before (matches iOS feel better)
+        let backgroundColor: UIColor = UIColor(white: 0.12, alpha: 0.22)
+        let paddingH: CGFloat = 16    // horizontal
+        let paddingV: CGFloat = 10    // vertical
+        let cornerRadius: CGFloat = 10
+        let drawsShadow = true
+
+        let base = image.fixedOrientation() ?? image
+        let scale = base.scale
+        let size  = base.size
+
+        // ≈3.5% of image width (clamped to ≥10pt)
+        let fontPointSize: CGFloat = max(10, size.width * 0.035)
+        // San Francisco system font is what the Camera/Photos overlays use
+        let font: UIFont = .systemFont(ofSize: fontPointSize, weight: .semibold)
+
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: textColor
+        ]
+        let textSize = (text as NSString).size(withAttributes: attrs)
+
+        // Bubble rect (top-right)
+        let bgSize  = CGSize(width: textSize.width + paddingH * 2,
+                             height: textSize.height + paddingV * 2)
+        let margin: CGFloat = 12 // distance from edges of the photo
+        let bgOrigin = CGPoint(x: size.width - bgSize.width - margin,
+                               y: margin)
+        let bgRect = CGRect(origin: bgOrigin, size: bgSize)
+
+        // Text origin inside bubble
+        let textOrigin = CGPoint(x: bgRect.minX + paddingH,
+                                 y: bgRect.minY + paddingV)
+
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = scale
+        format.opaque = true
+
+        return UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+            base.draw(in: CGRect(origin: .zero, size: size))
+
+            // Bubble
+            let bubblePath = UIBezierPath(roundedRect: bgRect, cornerRadius: cornerRadius)
+            if drawsShadow {
+                ctx.cgContext.saveGState()
+                ctx.cgContext.setShadow(offset: CGSize(width: 0, height: 2),
+                                        blur: 6,
+                                        color: UIColor.black.withAlphaComponent(0.25).cgColor)
+                backgroundColor.setFill()
+                bubblePath.fill()
+                ctx.cgContext.restoreGState()
+            } else {
+                backgroundColor.setFill()
+                bubblePath.fill()
+            }
+
+            // High-quality text rendering
+            let g = ctx.cgContext
+            g.setAllowsAntialiasing(true)
+            g.setShouldAntialias(true)
+            g.setAllowsFontSmoothing(true)
+            g.setShouldSmoothFonts(true)
+            g.setShouldSubpixelPositionFonts(true)
+            g.interpolationQuality = .high
+
+            // Single pass: fill only (no stroke/outline)
+            (text as NSString).draw(at: textOrigin, withAttributes: attrs)
+        }
+    }
+
+    func makeTimestampString(from photoData: Data?, metadata: [AnyHashable: Any]?) -> String {
+        func extractDateString(from meta: [String: Any]) -> String? {
+            if let exif = meta[kCGImagePropertyExifDictionary as String] as? [String: Any] {
+                if let s = exif[kCGImagePropertyExifDateTimeOriginal as String] as? String { return s }
+                if let s = exif[kCGImagePropertyExifDateTimeDigitized as String] as? String { return s }
+            }
+            if let tiff = meta[kCGImagePropertyTIFFDictionary as String] as? [String: Any] {
+                if let s = tiff[kCGImagePropertyTIFFDateTime as String] as? String { return s }
+            }
+            return nil
+        }
+
+        var raw: String?
+        if let metadata = metadata as? [String: Any] {
+            raw = extractDateString(from: metadata)
+        }
+        if raw == nil, let data = photoData,
+           let src = CGImageSourceCreateWithData(data as CFData, nil),
+           let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [String: Any] {
+            raw = extractDateString(from: props)
+        }
+
+        let outFmt = DateFormatter()
+        outFmt.locale = .current
+        outFmt.timeZone = .current
+        outFmt.dateFormat = "yyyy-MM-dd HH:mm:ss"
+
+        if let raw = raw {
+            let df = DateFormatter()
+            df.locale = Locale(identifier: "en_US_POSIX")
+            df.timeZone = .current
+            df.dateFormat = raw.contains(".") ? "yyyy:MM:dd HH:mm:ss.SSS" : "yyyy:MM:dd HH:mm:ss"
+            if let d = df.date(from: raw) {
+                return outFmt.string(from: d)
+            }
+        }
+
+        return outFmt.string(from: Date())
+    }
+
+    // Create JPEG data from `image`, merging the original EXIF/GPS/etc. and forcing Orientation=1.
+    func jpegDataPreservingMetadata(from image: UIImage,
+                                    originalPhotoData: Data?,
+                                    originalMetadata: [AnyHashable: Any]?,
+                                    quality: CGFloat = 0.9) -> Data? {
+        // Encode pixels first
+        guard let cgImg = image.cgImage else { return image.jpegData(compressionQuality: quality) }
+        let uiImageData = UIImage(cgImage: cgImg, scale: image.scale, orientation: .up)
+            .jpegData(compressionQuality: quality)
+
+        // If we don’t have source metadata, just return the new JPEG
+        guard let srcData = originalPhotoData, let newJPEG = uiImageData else { return uiImageData }
+
+        // Load base metadata from source, then overlay any explicit metadata dict we were given
+        let cgSrc = CGImageSourceCreateWithData(srcData as CFData, nil)
+        let baseMetadata: [String: Any]
+        if let src = cgSrc,
+           let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [String: Any] {
+            var merged = props
+            if let explicit = originalMetadata as? [String: Any] {
+                for (k, v) in explicit { merged[k] = v }
+            }
+            baseMetadata = merged
+        } else if let explicit = originalMetadata as? [String: Any] {
+            baseMetadata = explicit
+        } else {
+            return newJPEG
+        }
+
+        // Prepare destination
+        let dstData = NSMutableData()
+        guard let cgDst = CGImageDestinationCreateWithData(dstData, UTType.jpeg.identifier as CFString, 1, nil) else {
+            return newJPEG
+        }
+
+        // Force normalized orientation (pixels are already .up)
+        var metaOut = baseMetadata
+        if var tiff = metaOut[kCGImagePropertyTIFFDictionary as String] as? [String: Any] {
+            tiff[kCGImagePropertyTIFFOrientation as String] = 1
+            metaOut[kCGImagePropertyTIFFDictionary as String] = tiff
+        }
+        metaOut[kCGImagePropertyOrientation as String] = 1
+
+        // Write the new pixels + merged metadata
+        if let cgImage = UIImage(data: newJPEG)?.cgImage {
+            CGImageDestinationAddImage(cgDst, cgImage, metaOut as CFDictionary)
+            CGImageDestinationFinalize(cgDst)
+            return (dstData as Data)
+        }
+
+        return newJPEG
     }
 
     func addGPSMetadata(to image: UIImage, location: CLLocation) {

@@ -6,9 +6,12 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
@@ -86,6 +89,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -1164,7 +1168,8 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
     final boolean saveToGallery,
     Integer width,
     Integer height,
-    Location location
+    Location location,
+    final boolean embedTimestamp
   ) {
     // Prevent capture if a stop is pending
     if (IsOperationRunning("capturePhoto")) {
@@ -1173,12 +1178,16 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
     }
     Log.d(
       TAG,
-      "capturePhoto: Starting photo capture with quality: " +
+      "capturePhoto: Starting photo capture with: " +
       quality +
       ", width: " +
       width +
       ", height: " +
-      height
+      height +
+      ", saveToGallery: " +
+      saveToGallery +
+      ", embedTimestamp: " +
+      embedTimestamp
     );
 
     if (imageCapture == null) {
@@ -1253,6 +1262,12 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
                 width,
                 height
               );
+              if (embedTimestamp) {
+                resizedBitmap = drawTimestampOntoBitmap(
+                  resizedBitmap,
+                  exifInterface
+                );
+              }
               ByteArrayOutputStream stream = new ByteArrayOutputStream();
               resizedBitmap.compress(
                 Bitmap.CompressFormat.JPEG,
@@ -1287,6 +1302,12 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
                 exifInterface
               );
               Bitmap previewCropped = cropBitmapToMatchPreview(originalBitmap);
+              if (embedTimestamp) {
+                previewCropped = drawTimestampOntoBitmap(
+                  previewCropped,
+                  exifInterface
+                );
+              }
               ByteArrayOutputStream stream = new ByteArrayOutputStream();
               previewCropped.compress(
                 Bitmap.CompressFormat.JPEG,
@@ -1383,6 +1404,108 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
         }
       }
     );
+  }
+
+  private Bitmap drawTimestampOntoBitmap(Bitmap src, ExifInterface exif) {
+    if (src == null) return null;
+
+    // Build timestamp string ("yyyy-MM-dd HH:mm:ss"), preferring EXIF original
+    final String fmt = "yyyy-MM-dd HH:mm:ss";
+    String when = null;
+    if (exif != null) {
+      final String exifDate = exif.getAttribute(
+        ExifInterface.TAG_DATETIME_ORIGINAL
+      ); // "yyyy:MM:dd HH:mm:ss"
+      if (exifDate != null && !exifDate.trim().isEmpty()) {
+        try {
+          java.text.SimpleDateFormat inFmt = new java.text.SimpleDateFormat(
+            "yyyy:MM:dd HH:mm:ss",
+            java.util.Locale.US
+          );
+          java.util.Date d = inFmt.parse(exifDate);
+          if (d != null) {
+            when = new java.text.SimpleDateFormat(
+              fmt,
+              java.util.Locale.getDefault()
+            ).format(d);
+          }
+        } catch (java.text.ParseException ignored) {}
+      }
+    }
+    if (when == null) {
+      when = new java.text.SimpleDateFormat(
+        fmt,
+        java.util.Locale.getDefault()
+      ).format(new java.util.Date());
+    }
+
+    final Bitmap bmp = src.isMutable()
+      ? src
+      : src.copy(Bitmap.Config.ARGB_8888, true);
+    final Canvas canvas = new Canvas(bmp);
+
+    // ---- Match iOS constants ----
+    final float fontPx = Math.max(10f, bmp.getWidth() * 0.035f); // ≥10, 3.5% of width
+    final float paddingH = 16f;
+    final float paddingV = 10f;
+    final float cornerRadius = 10f;
+    final float margin = 12f;
+
+    // Text paint (SF .semibold ≈ Roboto Medium)
+    final Paint text = new Paint(
+      Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG | Paint.LINEAR_TEXT_FLAG
+    );
+    text.setColor(Color.WHITE);
+    text.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+    text.setTextSize(fontPx);
+    text.setTextAlign(Paint.Align.LEFT);
+    text.setDither(true);
+
+    // Measure text
+    final float textWidth = text.measureText(when);
+    final Paint.FontMetrics fm = text.getFontMetrics();
+    final float textHeight = fm.descent - fm.ascent;
+
+    // Bubble rect (top-right)
+    final float bgWidth = textWidth + paddingH * 2f;
+    final float bgHeight = textHeight + paddingV * 2f;
+    final float bgLeft = Math.max(0, bmp.getWidth() - bgWidth - margin);
+    final float bgTop = margin;
+    final float bgRight = bgLeft + bgWidth;
+    final float bgBottom = bgTop + bgHeight;
+
+    // Background color: UIColor(white:0.12, alpha:0.22)
+    // -> alpha ≈ 0.22*255 ≈ 56, rgb ≈ 0.12*255 ≈ 31
+    final int bgColor = Color.argb(56, 31, 31, 31);
+
+    final Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG);
+    bg.setColor(bgColor);
+    bg.setStyle(Paint.Style.FILL);
+    // Shadow: offset (0,2), blur ~6, alpha 0.25 black
+    bg.setShadowLayer(6f, 0f, 2f, Color.argb(64, 0, 0, 0));
+
+    // Draw bubble
+    canvas.drawRoundRect(
+      bgLeft,
+      bgTop,
+      bgRight,
+      bgBottom,
+      cornerRadius,
+      cornerRadius,
+      bg
+    );
+
+    // Text origin (like iOS: top-left inside padding)
+    final float textX = bgLeft + paddingH;
+    final float textY = bgTop + paddingV - fm.ascent; // convert top-left to baseline
+
+    // High-quality rendering akin to iOS flags
+    text.setFilterBitmap(true);
+    text.setHinting(Paint.HINTING_ON);
+
+    canvas.drawText(when, textX, textY, text);
+
+    return bmp;
   }
 
   private int exifToDegrees(int exifOrientation) {

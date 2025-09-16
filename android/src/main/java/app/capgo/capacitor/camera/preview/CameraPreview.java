@@ -369,8 +369,18 @@ public class CameraPreview
     );
     Integer width = call.getInt("width");
     Integer height = call.getInt("height");
+    final boolean embedTimestamp = Boolean.TRUE.equals(
+      call.getBoolean("embedTimestamp")
+    );
 
-    cameraXView.capturePhoto(quality, saveToGallery, width, height, location);
+    cameraXView.capturePhoto(
+      quality,
+      saveToGallery,
+      width,
+      height,
+      location,
+      embedTimestamp
+    );
   }
 
   @PluginMethod
