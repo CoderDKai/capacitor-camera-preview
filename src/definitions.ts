@@ -249,6 +249,12 @@ export interface CameraPreviewPictureOptions {
    * @since 7.6.0
    */
   withExifLocation?: boolean;
+  /**
+   * If true, the plugin will embed a timestamp in the top-right corner of the image.
+   * @default false
+   * @since 7.17.0
+   */
+  embedTimestamp?: boolean;
 }
 
 /** Represents EXIF data extracted from an image. */
