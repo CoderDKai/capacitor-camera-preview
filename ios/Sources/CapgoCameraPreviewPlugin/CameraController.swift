@@ -1072,14 +1072,13 @@ extension CameraController {
     }
 
     func makeTimestampString(from photoData: Data?, metadata: [AnyHashable: Any]?) -> String {
-        // Try metadata first (fast path)
-        func extractDateString(from meta: [AnyHashable: Any]) -> String? {
+        func extractDateString(from meta: [String: Any]) -> String? {
             if let exif = meta[kCGImagePropertyExifDictionary as String] as? [String: Any] {
-                if let s = exif[kCGImagePropertyExifDateTimeOriginal as String] as? String { return s }        // "yyyy:MM:dd HH:mm:ss"
+                if let s = exif[kCGImagePropertyExifDateTimeOriginal as String] as? String { return s }
                 if let s = exif[kCGImagePropertyExifDateTimeDigitized as String] as? String { return s }
             }
             if let tiff = meta[kCGImagePropertyTIFFDictionary as String] as? [String: Any] {
-                if let s = tiff[kCGImagePropertyTIFFDateTime as String] as? String { return s }                // "yyyy:MM:dd HH:mm:ss"
+                if let s = tiff[kCGImagePropertyTIFFDateTime as String] as? String { return s }
             }
             return nil
         }
@@ -1088,34 +1087,27 @@ extension CameraController {
         if let metadata = metadata as? [String: Any] {
             raw = extractDateString(from: metadata)
         }
-
-        // If not in metadata, try reading from the JPEG data’s properties
         if raw == nil, let data = photoData,
         let src = CGImageSourceCreateWithData(data as CFData, nil),
         let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [String: Any] {
             raw = extractDateString(from: props)
         }
 
-        // Parse EXIF formatted date "yyyy:MM:dd HH:mm:ss" (optionally with .SSS)
         let outFmt = DateFormatter()
         outFmt.locale = .current
         outFmt.timeZone = .current
         outFmt.dateFormat = "yyyy-MM-dd HH:mm:ss"
 
         if let raw = raw {
-            let candidates = ["yyyy:MM:dd HH:mm:ss.SSS", "yyyy:MM:dd HH:mm:ss"]
-            for fmt in candidates {
-                let df = DateFormatter()
-                df.locale = Locale(identifier: "en_US_POSIX")
-                df.timeZone = TimeZone(secondsFromGMT: 0) // EXIF is effectively local/unknown; using GMT avoids DST parse issues
-                df.dateFormat = fmt
-                if let d = df.date(from: raw) {
-                    return outFmt.string(from: d)
-                }
+            let df = DateFormatter()
+            df.locale = Locale(identifier: "en_US_POSIX")
+            df.timeZone = .current
+            df.dateFormat = raw.contains(".") ? "yyyy:MM:dd HH:mm:ss.SSS" : "yyyy:MM:dd HH:mm:ss"
+            if let d = df.date(from: raw) {
+                return outFmt.string(from: d)
             }
         }
 
-        // Fallback: now
         return outFmt.string(from: Date())
     }
 
