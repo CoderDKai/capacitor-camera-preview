@@ -393,7 +393,6 @@ extension CameraController {
                     fileVideoOutput.connections.forEach { $0.videoOrientation = videoOrientation }
                 }
 
-
                 // Set up preview layer session in the same configuration block
                 if let layer = self.previewLayer {
                     layer.session = captureSession
@@ -716,7 +715,6 @@ extension CameraController {
         gridOverlayView = nil
     }
 
-
     func updateVideoOrientation() {
         // Get orientation in a thread-safe way
         let videoOrientation = self.getVideoOrientation()
@@ -771,14 +769,14 @@ extension CameraController {
             if device.supportsSessionPreset(.hd4K3840x2160) { return .hd4K3840x2160 }
             if device.supportsSessionPreset(.hd1920x1080) { return .hd1920x1080 }
             if device.supportsSessionPreset(.hd1280x720) { return .hd1280x720 }
-            if device.supportsSessionPreset(.high)       { return .high }
-            if device.supportsSessionPreset(.photo)      { return .photo } // safe, though 4:3
+            if device.supportsSessionPreset(.high) { return .high }
+            if device.supportsSessionPreset(.photo) { return .photo } // safe, though 4:3
             return .vga640x480
         } else {
             // 4:3 or unknown: prefer photo → high → 1080p → 720p → vga
-            if device.supportsSessionPreset(.photo)      { return .photo }
-            if device.supportsSessionPreset(.high)       { return .high }
-            if device.supportsSessionPreset(.hd1920x1080){ return .hd1920x1080 }
+            if device.supportsSessionPreset(.photo) { return .photo }
+            if device.supportsSessionPreset(.high) { return .high }
+            if device.supportsSessionPreset(.hd1920x1080) { return .hd1920x1080 }
             if device.supportsSessionPreset(.hd1280x720) { return .hd1280x720 }
             return .vga640x480
         }
@@ -1097,7 +1095,7 @@ extension CameraController {
 
         // Validate crop rect is within image bounds
         if cropRect.minX < 0 || cropRect.minY < 0 ||
-           cropRect.maxX > imageSize.width || cropRect.maxY > imageSize.height {
+            cropRect.maxX > imageSize.width || cropRect.maxY > imageSize.height {
             print("[CameraPreview] cropImageToAspectRatio - Warning: Crop rect \(cropRect) exceeds image bounds \(imageSize)")
             // Adjust crop rect to fit within image bounds
             cropRect = cropRect.intersection(CGRect(origin: .zero, size: imageSize))
