@@ -6,9 +6,12 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
@@ -86,6 +89,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -1164,7 +1168,8 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
     final boolean saveToGallery,
     Integer width,
     Integer height,
-    Location location
+    Location location,
+    final boolean embedTimestamp
   ) {
     // Prevent capture if a stop is pending
     if (IsOperationRunning("capturePhoto")) {
@@ -1173,12 +1178,16 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
     }
     Log.d(
       TAG,
-      "capturePhoto: Starting photo capture with quality: " +
+      "capturePhoto: Starting photo capture with: " +
       quality +
       ", width: " +
       width +
       ", height: " +
-      height
+      height + 
+      ", saveToGallery: " +
+      saveToGallery +
+      ", embedTimestamp: " +
+      embedTimestamp
     );
 
     if (imageCapture == null) {
@@ -1253,6 +1262,9 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
                 width,
                 height
               );
+              if (embedTimestamp) {
+                resizedBitmap = drawTimestampOntoBitmap(resizedBitmap, exifInterface);
+              }
               ByteArrayOutputStream stream = new ByteArrayOutputStream();
               resizedBitmap.compress(
                 Bitmap.CompressFormat.JPEG,
@@ -1287,6 +1299,9 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
                 exifInterface
               );
               Bitmap previewCropped = cropBitmapToMatchPreview(originalBitmap);
+              if (embedTimestamp) {
+                previewCropped = drawTimestampOntoBitmap(previewCropped, exifInterface);
+              }
               ByteArrayOutputStream stream = new ByteArrayOutputStream();
               previewCropped.compress(
                 Bitmap.CompressFormat.JPEG,
@@ -1383,6 +1398,86 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
         }
       }
     );
+  }
+
+  private Bitmap drawTimestampOntoBitmap(Bitmap src, ExifInterface exif) {
+    if (src == null) return null;
+
+    // Build timestamp string ("yyyy-MM-dd  HH:mm:ss")
+    String timestampFormat = "yyyy-MM-dd HH:mm:ss";
+    String when = null;
+    if (exif != null) {
+        String exifDate = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL);
+        if (exifDate != null && !exifDate.trim().isEmpty()) {
+            try {
+                // Parse EXIF date: "2025:09:16 17:18:03"
+                java.text.SimpleDateFormat exifFormat =
+                    new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", java.util.Locale.US);
+                java.util.Date parsed = exifFormat.parse(exifDate);
+                if (parsed != null) {
+                    java.text.SimpleDateFormat targetFormat =
+                        new java.text.SimpleDateFormat(timestampFormat, java.util.Locale.getDefault());
+                    when = targetFormat.format(parsed);
+                }
+            } catch (java.text.ParseException ignored) {
+                // fallback handled below
+            }
+        }
+    }
+
+    if (when == null) {
+        // Fallback to current date if EXIF not available or parsing failed
+        when = new java.text.SimpleDateFormat(timestampFormat, java.util.Locale.getDefault())
+                .format(new java.util.Date());
+    }
+
+    Bitmap bmp = src.isMutable() ? src : src.copy(Bitmap.Config.ARGB_8888, true);
+    Canvas canvas = new Canvas(bmp);
+
+    // Font size ≈ 3.5% of image width (minimum 10pt)
+    float textSize = Math.max(10f, bmp.getWidth() * 0.035f);
+    float padding = Math.max(12f, textSize * 0.6f);
+    float cornerRadius = 10f / 16f * padding; // proportional to padding
+
+    // Measure text
+    Paint measure = new Paint(Paint.ANTI_ALIAS_FLAG);
+    measure.setTextSize(textSize);
+    measure.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+    float textWidth = measure.measureText(when);
+    Paint.FontMetrics fm = measure.getFontMetrics();
+    float textHeight = fm.descent - fm.ascent;
+
+    // Bubble size with full symmetric padding
+    float bgWidth  = textWidth + padding;
+    float bgHeight = textHeight + padding;
+
+    // Bubble position: top-right, padding from outer edge
+    float bgLeft = Math.max(0, bmp.getWidth() - bgWidth - padding);
+    float bgTop  = padding;
+    float bgRight = bgLeft + bgWidth;
+    float bgBottom = bgTop + bgHeight;
+
+    // Background (25% dark gray with subtle shadow like iOS)
+    Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG);
+    bg.setColor(Color.argb((int)(0.25f * 255), 77, 77, 77)); // iOS match: 30% gray @ 25%
+    bg.setStyle(Paint.Style.FILL);
+    bg.setShadowLayer(6f, 0f, 2f, Color.argb(64, 0, 0, 0));
+    canvas.drawRoundRect(bgLeft, bgTop, bgRight, bgBottom, cornerRadius, cornerRadius, bg);
+
+    // Text paint (no stroke)
+    Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
+    fill.setColor(Color.WHITE);
+    fill.setStyle(Paint.Style.FILL);
+    fill.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+    fill.setTextSize(textSize);
+    fill.setTextAlign(Paint.Align.LEFT);
+
+    // Draw text inside bubble, padding/2 from edges
+    float textX = bgLeft + (padding / 2f);
+    float textY = bgTop  + (padding / 2f) - fm.ascent;
+    canvas.drawText(when, textX, textY, fill);
+
+    return bmp;
   }
 
   private int exifToDegrees(int exifOrientation) {
