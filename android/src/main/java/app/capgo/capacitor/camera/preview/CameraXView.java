@@ -1403,79 +1403,80 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
   private Bitmap drawTimestampOntoBitmap(Bitmap src, ExifInterface exif) {
     if (src == null) return null;
 
-    // Build timestamp string ("yyyy-MM-dd  HH:mm:ss")
-    String timestampFormat = "yyyy-MM-dd HH:mm:ss";
+    // Build timestamp string ("yyyy-MM-dd HH:mm:ss"), preferring EXIF original
+    final String fmt = "yyyy-MM-dd HH:mm:ss";
     String when = null;
     if (exif != null) {
-        String exifDate = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL);
+        final String exifDate = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL); // "yyyy:MM:dd HH:mm:ss"
         if (exifDate != null && !exifDate.trim().isEmpty()) {
             try {
-                // Parse EXIF date: "2025:09:16 17:18:03"
-                java.text.SimpleDateFormat exifFormat =
-                    new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", java.util.Locale.US);
-                java.util.Date parsed = exifFormat.parse(exifDate);
-                if (parsed != null) {
-                    java.text.SimpleDateFormat targetFormat =
-                        new java.text.SimpleDateFormat(timestampFormat, java.util.Locale.getDefault());
-                    when = targetFormat.format(parsed);
+                java.text.SimpleDateFormat inFmt =
+                        new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", java.util.Locale.US);
+                java.util.Date d = inFmt.parse(exifDate);
+                if (d != null) {
+                    when = new java.text.SimpleDateFormat(fmt, java.util.Locale.getDefault()).format(d);
                 }
-            } catch (java.text.ParseException ignored) {
-                // fallback handled below
-            }
+            } catch (java.text.ParseException ignored) {}
         }
     }
-
     if (when == null) {
-        // Fallback to current date if EXIF not available or parsing failed
-        when = new java.text.SimpleDateFormat(timestampFormat, java.util.Locale.getDefault())
+        when = new java.text.SimpleDateFormat(fmt, java.util.Locale.getDefault())
                 .format(new java.util.Date());
     }
 
-    Bitmap bmp = src.isMutable() ? src : src.copy(Bitmap.Config.ARGB_8888, true);
-    Canvas canvas = new Canvas(bmp);
+    final Bitmap bmp = src.isMutable() ? src : src.copy(Bitmap.Config.ARGB_8888, true);
+    final Canvas canvas = new Canvas(bmp);
 
-    // Font size ≈ 3.5% of image width (minimum 10pt)
-    float textSize = Math.max(10f, bmp.getWidth() * 0.035f);
-    float padding = Math.max(12f, textSize * 0.6f);
-    float cornerRadius = 10f / 16f * padding; // proportional to padding
+    // ---- Match iOS constants ----
+    final float fontPx = Math.max(10f, bmp.getWidth() * 0.035f); // ≥10, 3.5% of width
+    final float paddingH = 16f;
+    final float paddingV = 10f;
+    final float cornerRadius = 10f;
+    final float margin = 12f;
+
+    // Text paint (SF .semibold ≈ Roboto Medium)
+    final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG | Paint.LINEAR_TEXT_FLAG);
+    text.setColor(Color.WHITE);
+    text.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+    text.setTextSize(fontPx);
+    text.setTextAlign(Paint.Align.LEFT);
+    text.setDither(true);
 
     // Measure text
-    Paint measure = new Paint(Paint.ANTI_ALIAS_FLAG);
-    measure.setTextSize(textSize);
-    measure.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-    float textWidth = measure.measureText(when);
-    Paint.FontMetrics fm = measure.getFontMetrics();
-    float textHeight = fm.descent - fm.ascent;
+    final float textWidth = text.measureText(when);
+    final Paint.FontMetrics fm = text.getFontMetrics();
+    final float textHeight = fm.descent - fm.ascent;
 
-    // Bubble size with full symmetric padding
-    float bgWidth  = textWidth + padding;
-    float bgHeight = textHeight + padding;
+    // Bubble rect (top-right)
+    final float bgWidth  = textWidth + paddingH * 2f;
+    final float bgHeight = textHeight + paddingV * 2f;
+    final float bgLeft   = Math.max(0, bmp.getWidth()  - bgWidth - margin);
+    final float bgTop    = margin;
+    final float bgRight  = bgLeft + bgWidth;
+    final float bgBottom = bgTop  + bgHeight;
 
-    // Bubble position: top-right, padding from outer edge
-    float bgLeft = Math.max(0, bmp.getWidth() - bgWidth - padding);
-    float bgTop  = padding;
-    float bgRight = bgLeft + bgWidth;
-    float bgBottom = bgTop + bgHeight;
+    // Background color: UIColor(white:0.12, alpha:0.22)
+    // -> alpha ≈ 0.22*255 ≈ 56, rgb ≈ 0.12*255 ≈ 31
+    final int bgColor = Color.argb(56, 31, 31, 31);
 
-    // Background (25% dark gray with subtle shadow like iOS)
-    Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG);
-    bg.setColor(Color.argb((int)(0.25f * 255), 77, 77, 77)); // iOS match: 30% gray @ 25%
+    final Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG);
+    bg.setColor(bgColor);
     bg.setStyle(Paint.Style.FILL);
+    // Shadow: offset (0,2), blur ~6, alpha 0.25 black
     bg.setShadowLayer(6f, 0f, 2f, Color.argb(64, 0, 0, 0));
+
+    // Draw bubble
     canvas.drawRoundRect(bgLeft, bgTop, bgRight, bgBottom, cornerRadius, cornerRadius, bg);
 
-    // Text paint (no stroke)
-    Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
-    fill.setColor(Color.WHITE);
-    fill.setStyle(Paint.Style.FILL);
-    fill.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-    fill.setTextSize(textSize);
-    fill.setTextAlign(Paint.Align.LEFT);
+    // Text origin (like iOS: top-left inside padding)
+    final float textX = bgLeft + paddingH;
+    final float textY = bgTop  + paddingV - fm.ascent; // convert top-left to baseline
 
-    // Draw text inside bubble, padding/2 from edges
-    float textX = bgLeft + (padding / 2f);
-    float textY = bgTop  + (padding / 2f) - fm.ascent;
-    canvas.drawText(when, textX, textY, fill);
+    // High-quality rendering akin to iOS flags
+    text.setFilterBitmap(true);
+    text.setHinting(Paint.HINTING_ON);
+
+    canvas.drawText(when, textX, textY, text);
 
     return bmp;
   }
