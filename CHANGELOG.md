@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [7.16.3](https://github.com/Cap-go/capacitor-camera-preview/compare/7.16.2...7.16.3) (2025-09-16)
+
+
+### Bug Fixes
+
+* update TIFF and EXIF dimensions handling in CameraXView ([fdf82af](https://github.com/Cap-go/capacitor-camera-preview/commit/fdf82af36a515c9c52660cfaa4d7a62b782dbce3))
+
 ## [7.16.2](https://github.com/Cap-go/capacitor-camera-preview/compare/7.16.1...7.16.2) (2025-09-15)
 
 
