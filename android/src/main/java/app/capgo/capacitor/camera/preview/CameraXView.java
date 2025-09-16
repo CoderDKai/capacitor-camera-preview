@@ -1314,13 +1314,7 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
             if (transformedPixels) {
               Integer fW = (finalWidthOut > 0) ? finalWidthOut : null;
               Integer fH = (finalHeightOut > 0) ? finalHeightOut : null;
-              bytes = injectExifInMemory(
-                bytes,
-                originalCaptureBytes,
-                fW,
-                fH,
-                /*normalizeOrientation*/true
-              );
+              bytes = injectExifInMemory(bytes, originalCaptureBytes, fW, fH);
             }
 
             // Save to gallery asynchronously if requested, copy EXIF to file
@@ -1495,8 +1489,7 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
     byte[] targetJpeg,
     byte[] sourceJpegWithExif,
     Integer finalWidth,
-    Integer finalHeight,
-    boolean normalizeOrientation
+    Integer finalHeight
   ) {
     try {
       // Quick signature check for JPEG (FF D8 FF)
@@ -1524,19 +1517,27 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
           : new org.apache.commons.imaging.formats.tiff.write.TiffOutputSet();
 
       // Update orientation if requested (normalize to 1)
-      if (normalizeOrientation) {
-        org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory rootDir =
-          outputSet.getOrCreateRootDirectory();
-        rootDir.removeField(
-          org.apache.commons.imaging.formats.tiff.constants.TiffTagConstants.TIFF_TAG_ORIENTATION
-        );
-        rootDir.add(
-          org.apache.commons.imaging.formats.tiff.constants.TiffTagConstants.TIFF_TAG_ORIENTATION,
-          (short) 1
-        );
-      }
+      org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory rootDir =
+        outputSet.getOrCreateRootDirectory();
+      rootDir.removeField(
+        org.apache.commons.imaging.formats.tiff.constants.TiffTagConstants.TIFF_TAG_ORIENTATION
+      );
+      rootDir.add(
+        org.apache.commons.imaging.formats.tiff.constants.TiffTagConstants.TIFF_TAG_ORIENTATION,
+        (short) 1
+      );
 
-      // Optionally update dimensions here. Skipped to maximize compatibility with Commons Imaging 1.0-alpha3.
+      if (finalWidth != null || finalHeight != null) {
+        try {
+          updateResizedDimensions(outputSet, finalWidth, finalHeight);
+        } catch (Exception dimensionUpdateError) {
+          Log.w(
+            TAG,
+            "injectExifInMemory: Failed to update resized dimensions",
+            dimensionUpdateError
+          );
+        }
+      }
 
       java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
       new org.apache.commons.imaging.formats.jpeg.exif.ExifRewriter()
@@ -1550,6 +1551,65 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
       Log.w(TAG, "injectExifInMemory: Failed to write EXIF in memory", t);
       return targetJpeg; // Fallback: return original bytes
     }
+  }
+
+  private void updateResizedDimensions(
+    org.apache.commons.imaging.formats.tiff.write.TiffOutputSet outputSet,
+    Integer finalWidth,
+    Integer finalHeight
+  ) throws org.apache.commons.imaging.ImagingException {
+    org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory rootDir =
+      outputSet.getOrCreateRootDirectory();
+    if (finalWidth != null) {
+      replaceShortOrLongTag(
+        rootDir,
+        org.apache.commons.imaging.formats.tiff.constants.TiffTagConstants.TIFF_TAG_IMAGE_WIDTH,
+        finalWidth
+      );
+    }
+    if (finalHeight != null) {
+      replaceShortOrLongTag(
+        rootDir,
+        org.apache.commons.imaging.formats.tiff.constants.TiffTagConstants.TIFF_TAG_IMAGE_LENGTH,
+        finalHeight
+      );
+    }
+
+    org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory exifDir =
+      outputSet.getOrCreateExifDirectory();
+    if (finalWidth != null) {
+      replaceShortTag(
+        exifDir,
+        org.apache.commons.imaging.formats.tiff.constants.ExifTagConstants.EXIF_TAG_EXIF_IMAGE_WIDTH,
+        finalWidth
+      );
+    }
+    if (finalHeight != null) {
+      replaceShortTag(
+        exifDir,
+        org.apache.commons.imaging.formats.tiff.constants.ExifTagConstants.EXIF_TAG_EXIF_IMAGE_LENGTH,
+        finalHeight
+      );
+    }
+  }
+
+  private void replaceShortOrLongTag(
+    org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory directory,
+    org.apache.commons.imaging.formats.tiff.taginfos.TagInfoShortOrLong tagInfo,
+    int value
+  ) throws org.apache.commons.imaging.ImagingException {
+    directory.removeField(tagInfo);
+    directory.add(tagInfo, value);
+  }
+
+  private void replaceShortTag(
+    org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory directory,
+    org.apache.commons.imaging.formats.tiff.taginfos.TagInfoShort tagInfo,
+    int value
+  ) throws org.apache.commons.imaging.ImagingException {
+    int sanitizedValue = Math.max(0, Math.min(value, 0xFFFF));
+    directory.removeField(tagInfo);
+    directory.add(tagInfo, (short) sanitizedValue);
   }
 
   private static final String[][] EXIF_TAGS = new String[][] {
