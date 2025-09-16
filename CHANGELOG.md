@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [7.17.0](https://github.com/Cap-go/capacitor-camera-preview/compare/7.16.5...7.17.0) (2025-09-16)
+
+
+### Features
+
+* more closely align android and ios ([fde1646](https://github.com/Cap-go/capacitor-camera-preview/commit/fde1646c20fc8768b033c90887e86802ea121d89))
+* push only the new embedTimestamp boolean ([c89c516](https://github.com/Cap-go/capacitor-camera-preview/commit/c89c5163b6829c336411f9af04257605e2b8e2f6))
+* support for new embedTimestamp setting to embed the timestamp into the image ([d3cb2cc](https://github.com/Cap-go/capacitor-camera-preview/commit/d3cb2cc910e0fbe6740e79004a40bce144c22959))
+
+
+### Bug Fixes
+
+* address review comment ([ff63d2f](https://github.com/Cap-go/capacitor-camera-preview/commit/ff63d2f8318b3254cf096831b85ca73e6e323d1b))
+* ios timestamp formatting ([4e48e31](https://github.com/Cap-go/capacitor-camera-preview/commit/4e48e3110c933fbf39fb047399cfe0f9da7e585c))
+* reset file ([6d51c62](https://github.com/Cap-go/capacitor-camera-preview/commit/6d51c6204eb206739adfc2c0c4a24fd43246498f))
+* run fmt ([a6ee9d5](https://github.com/Cap-go/capacitor-camera-preview/commit/a6ee9d527987d611775c3df75aa8b45158e6e468))
+
 ## [7.16.5](https://github.com/Cap-go/capacitor-camera-preview/compare/7.16.4...7.16.5) (2025-09-16)
 
 
