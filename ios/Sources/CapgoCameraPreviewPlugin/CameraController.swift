@@ -1,6 +1,7 @@
 import AVFoundation
 import UIKit
 import CoreLocation
+import UniformTypeIdentifiers
 
 class CameraController: NSObject {
     private func getVideoOrientation() -> AVCaptureVideoOrientation {
@@ -976,17 +977,9 @@ extension CameraController {
             if embedTimestamp {
                 let when = self.makeTimestampString(from: photoData, metadata: metadata)
                 finalImage = self.drawTimestamp(text: when, on: finalImage)
-
-                let jpegQuality = CGFloat(max(0.0, min(1.0, quality)))
-                let finalJPEG = self.jpegDataPreservingMetadata(from: finalImage,
-                                                                originalPhotoData: photoData,
-                                                                originalMetadata: metadata,
-                                                                quality: jpegQuality)
-                completion(finalImage, finalJPEG, metadata, nil)
-            } else {
-                // Preserve existing behaviour (return original JPEG data)
-                completion(finalImage, photoData, metadata, nil)
             }
+
+            completion(finalImage, photoData, metadata, nil)
 
             // End capture lifecycle
             self.isCapturingPhoto = false
