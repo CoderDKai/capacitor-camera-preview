@@ -373,7 +373,14 @@ public class CameraPreview
       call.getBoolean("embedTimestamp")
     );
 
-    cameraXView.capturePhoto(quality, saveToGallery, width, height, location, embedTimestamp);
+    cameraXView.capturePhoto(
+      quality,
+      saveToGallery,
+      width,
+      height,
+      location,
+      embedTimestamp
+    );
   }
 
   @PluginMethod

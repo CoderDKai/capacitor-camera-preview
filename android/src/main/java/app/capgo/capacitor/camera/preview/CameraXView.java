@@ -1183,7 +1183,7 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
       ", width: " +
       width +
       ", height: " +
-      height + 
+      height +
       ", saveToGallery: " +
       saveToGallery +
       ", embedTimestamp: " +
@@ -1263,7 +1263,10 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
                 height
               );
               if (embedTimestamp) {
-                resizedBitmap = drawTimestampOntoBitmap(resizedBitmap, exifInterface);
+                resizedBitmap = drawTimestampOntoBitmap(
+                  resizedBitmap,
+                  exifInterface
+                );
               }
               ByteArrayOutputStream stream = new ByteArrayOutputStream();
               resizedBitmap.compress(
@@ -1300,7 +1303,10 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
               );
               Bitmap previewCropped = cropBitmapToMatchPreview(originalBitmap);
               if (embedTimestamp) {
-                previewCropped = drawTimestampOntoBitmap(previewCropped, exifInterface);
+                previewCropped = drawTimestampOntoBitmap(
+                  previewCropped,
+                  exifInterface
+                );
               }
               ByteArrayOutputStream stream = new ByteArrayOutputStream();
               previewCropped.compress(
@@ -1407,24 +1413,35 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
     final String fmt = "yyyy-MM-dd HH:mm:ss";
     String when = null;
     if (exif != null) {
-        final String exifDate = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL); // "yyyy:MM:dd HH:mm:ss"
-        if (exifDate != null && !exifDate.trim().isEmpty()) {
-            try {
-                java.text.SimpleDateFormat inFmt =
-                        new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", java.util.Locale.US);
-                java.util.Date d = inFmt.parse(exifDate);
-                if (d != null) {
-                    when = new java.text.SimpleDateFormat(fmt, java.util.Locale.getDefault()).format(d);
-                }
-            } catch (java.text.ParseException ignored) {}
-        }
+      final String exifDate = exif.getAttribute(
+        ExifInterface.TAG_DATETIME_ORIGINAL
+      ); // "yyyy:MM:dd HH:mm:ss"
+      if (exifDate != null && !exifDate.trim().isEmpty()) {
+        try {
+          java.text.SimpleDateFormat inFmt = new java.text.SimpleDateFormat(
+            "yyyy:MM:dd HH:mm:ss",
+            java.util.Locale.US
+          );
+          java.util.Date d = inFmt.parse(exifDate);
+          if (d != null) {
+            when = new java.text.SimpleDateFormat(
+              fmt,
+              java.util.Locale.getDefault()
+            ).format(d);
+          }
+        } catch (java.text.ParseException ignored) {}
+      }
     }
     if (when == null) {
-        when = new java.text.SimpleDateFormat(fmt, java.util.Locale.getDefault())
-                .format(new java.util.Date());
+      when = new java.text.SimpleDateFormat(
+        fmt,
+        java.util.Locale.getDefault()
+      ).format(new java.util.Date());
     }
 
-    final Bitmap bmp = src.isMutable() ? src : src.copy(Bitmap.Config.ARGB_8888, true);
+    final Bitmap bmp = src.isMutable()
+      ? src
+      : src.copy(Bitmap.Config.ARGB_8888, true);
     final Canvas canvas = new Canvas(bmp);
 
     // ---- Match iOS constants ----
@@ -1435,7 +1452,9 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
     final float margin = 12f;
 
     // Text paint (SF .semibold ≈ Roboto Medium)
-    final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG | Paint.LINEAR_TEXT_FLAG);
+    final Paint text = new Paint(
+      Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG | Paint.LINEAR_TEXT_FLAG
+    );
     text.setColor(Color.WHITE);
     text.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
     text.setTextSize(fontPx);
@@ -1448,12 +1467,12 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
     final float textHeight = fm.descent - fm.ascent;
 
     // Bubble rect (top-right)
-    final float bgWidth  = textWidth + paddingH * 2f;
+    final float bgWidth = textWidth + paddingH * 2f;
     final float bgHeight = textHeight + paddingV * 2f;
-    final float bgLeft   = Math.max(0, bmp.getWidth()  - bgWidth - margin);
-    final float bgTop    = margin;
-    final float bgRight  = bgLeft + bgWidth;
-    final float bgBottom = bgTop  + bgHeight;
+    final float bgLeft = Math.max(0, bmp.getWidth() - bgWidth - margin);
+    final float bgTop = margin;
+    final float bgRight = bgLeft + bgWidth;
+    final float bgBottom = bgTop + bgHeight;
 
     // Background color: UIColor(white:0.12, alpha:0.22)
     // -> alpha ≈ 0.22*255 ≈ 56, rgb ≈ 0.12*255 ≈ 31
@@ -1466,11 +1485,19 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
     bg.setShadowLayer(6f, 0f, 2f, Color.argb(64, 0, 0, 0));
 
     // Draw bubble
-    canvas.drawRoundRect(bgLeft, bgTop, bgRight, bgBottom, cornerRadius, cornerRadius, bg);
+    canvas.drawRoundRect(
+      bgLeft,
+      bgTop,
+      bgRight,
+      bgBottom,
+      cornerRadius,
+      cornerRadius,
+      bg
+    );
 
     // Text origin (like iOS: top-left inside padding)
     final float textX = bgLeft + paddingH;
-    final float textY = bgTop  + paddingV - fm.ascent; // convert top-left to baseline
+    final float textY = bgTop + paddingV - fm.ascent; // convert top-left to baseline
 
     // High-quality rendering akin to iOS flags
     text.setFilterBitmap(true);
