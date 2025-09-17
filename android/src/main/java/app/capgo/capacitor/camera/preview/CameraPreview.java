@@ -372,6 +372,9 @@ public class CameraPreview
     final boolean embedTimestamp = Boolean.TRUE.equals(
       call.getBoolean("embedTimestamp")
     );
+    final boolean embedLocation = Boolean.TRUE.equals(
+      call.getBoolean("embedLocation")
+    );
 
     cameraXView.capturePhoto(
       quality,
@@ -379,7 +382,8 @@ public class CameraPreview
       width,
       height,
       location,
-      embedTimestamp
+      embedTimestamp,
+      embedLocation
     );
   }
 

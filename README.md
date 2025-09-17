@@ -1037,6 +1037,7 @@ Defines the options for capturing a picture.
 | **`saveToGallery`**    | <code>boolean</code>                                    | If true, the captured image will be saved to the user's gallery.                                                                                                                                            | <code>false</code>  | 7.5.0  |
 | **`withExifLocation`** | <code>boolean</code>                                    | If true, the plugin will attempt to add GPS location data to the image's EXIF metadata. This may prompt the user for location permissions.                                                                  | <code>false</code>  | 7.6.0  |
 | **`embedTimestamp`**   | <code>boolean</code>                                    | If true, the plugin will embed a timestamp in the top-right corner of the image.                                                                                                                            | <code>false</code>  | 7.17.0 |
+| **`embedLocation`**    | <code>boolean</code>                                    | If true, the plugin will embed the current location in the top-right corner of the image. Requires `withExifLocation` to be enabled.                                                                        | <code>false</code>  | 7.18.0 |
 
 
 #### CameraSampleOptions

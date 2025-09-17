@@ -1169,7 +1169,8 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
     Integer width,
     Integer height,
     Location location,
-    final boolean embedTimestamp
+    final boolean embedTimestamp,
+    final boolean embedLocation
   ) {
     // Prevent capture if a stop is pending
     if (IsOperationRunning("capturePhoto")) {
@@ -1187,7 +1188,9 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
       ", saveToGallery: " +
       saveToGallery +
       ", embedTimestamp: " +
-      embedTimestamp
+      embedTimestamp +
+      ", embedLocation: " +
+      embedLocation
     );
 
     if (imageCapture == null) {
@@ -1262,10 +1265,12 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
                 width,
                 height
               );
-              if (embedTimestamp) {
-                resizedBitmap = drawTimestampOntoBitmap(
+              if (embedTimestamp || embedLocation) {
+                resizedBitmap = drawTimestampAndLocationOntoBitmap(
                   resizedBitmap,
-                  exifInterface
+                  exifInterface,
+                  embedTimestamp,
+                  embedLocation
                 );
               }
               ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -1302,10 +1307,12 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
                 exifInterface
               );
               Bitmap previewCropped = cropBitmapToMatchPreview(originalBitmap);
-              if (embedTimestamp) {
-                previewCropped = drawTimestampOntoBitmap(
+              if (embedTimestamp || embedLocation) {
+                previewCropped = drawTimestampAndLocationOntoBitmap(
                   previewCropped,
-                  exifInterface
+                  exifInterface,
+                  embedTimestamp,
+                  embedLocation
                 );
               }
               ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -1406,37 +1413,34 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
     );
   }
 
-  private Bitmap drawTimestampOntoBitmap(Bitmap src, ExifInterface exif) {
+  private Bitmap drawTimestampAndLocationOntoBitmap(
+    Bitmap src,
+    ExifInterface exif,
+    boolean embedTimestamp,
+    boolean embedLocation
+  ) {
     if (src == null) return null;
 
-    // Build timestamp string ("yyyy-MM-dd HH:mm:ss"), preferring EXIF original
-    final String fmt = "yyyy-MM-dd HH:mm:ss";
-    String when = null;
-    if (exif != null) {
-      final String exifDate = exif.getAttribute(
-        ExifInterface.TAG_DATETIME_ORIGINAL
-      ); // "yyyy:MM:dd HH:mm:ss"
-      if (exifDate != null && !exifDate.trim().isEmpty()) {
-        try {
-          java.text.SimpleDateFormat inFmt = new java.text.SimpleDateFormat(
-            "yyyy:MM:dd HH:mm:ss",
-            java.util.Locale.US
-          );
-          java.util.Date d = inFmt.parse(exifDate);
-          if (d != null) {
-            when = new java.text.SimpleDateFormat(
-              fmt,
-              java.util.Locale.getDefault()
-            ).format(d);
-          }
-        } catch (java.text.ParseException ignored) {}
-      }
-    }
-    if (when == null) {
-      when = new java.text.SimpleDateFormat(
-        fmt,
-        java.util.Locale.getDefault()
-      ).format(new java.util.Date());
+    // Build strings (null-safe)
+    final String when = embedTimestamp
+      ? buildTimestampStringFromExif(exif)
+      : null;
+    final String where =
+      (embedLocation ? buildLocationStringFromExif(exif) : null);
+
+    // Nothing to draw?
+    if (
+      (when == null || when.isEmpty()) && (where == null || where.isEmpty())
+    ) {
+      Log.d(
+        TAG,
+        "capturePhoto:... embedTimestamp: " +
+        embedTimestamp +
+        ", embedLocation: " +
+        embedLocation
+      );
+      Log.d(TAG, "capturePhoto: nothing to draw");
+      return src;
     }
 
     final Bitmap bmp = src.isMutable()
@@ -1444,14 +1448,16 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
       : src.copy(Bitmap.Config.ARGB_8888, true);
     final Canvas canvas = new Canvas(bmp);
 
-    // ---- Match iOS constants ----
-    final float fontPx = Math.max(10f, bmp.getWidth() * 0.035f); // ≥10, 3.5% of width
-    final float paddingH = 16f;
-    final float paddingV = 10f;
-    final float cornerRadius = 10f;
-    final float margin = 12f;
+    // ---- Visual constants (match timestamp style) ----
+    final float fontPx = Math.max(10f, bmp.getWidth() * 0.035f); // ~3.5% of width
+    final float paddingH = 16f; // horizontal inner padding
+    final float paddingV = 10f; // vertical inner padding
+    final float margin = 12f; // margin from image edges
+    final float gap = 8f; // vertical gap between stacked pills
+    final float corner = 10f; // corner radius
+    final int bgColor = Color.argb(56, 31, 31, 31); // ~iOS gray at ~22% alpha
 
-    // Text paint (SF .semibold ≈ Roboto Medium)
+    // Text paint
     final Paint text = new Paint(
       Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG | Paint.LINEAR_TEXT_FLAG
     );
@@ -1460,52 +1466,110 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
     text.setTextSize(fontPx);
     text.setTextAlign(Paint.Align.LEFT);
     text.setDither(true);
-
-    // Measure text
-    final float textWidth = text.measureText(when);
+    text.setFilterBitmap(true);
+    text.setHinting(Paint.HINTING_ON);
     final Paint.FontMetrics fm = text.getFontMetrics();
-    final float textHeight = fm.descent - fm.ascent;
+    final float lineHeight = fm.descent - fm.ascent;
 
-    // Bubble rect (top-right)
-    final float bgWidth = textWidth + paddingH * 2f;
-    final float bgHeight = textHeight + paddingV * 2f;
-    final float bgLeft = Math.max(0, bmp.getWidth() - bgWidth - margin);
-    final float bgTop = margin;
-    final float bgRight = bgLeft + bgWidth;
-    final float bgBottom = bgTop + bgHeight;
-
-    // Background color: UIColor(white:0.12, alpha:0.22)
-    // -> alpha ≈ 0.22*255 ≈ 56, rgb ≈ 0.12*255 ≈ 31
-    final int bgColor = Color.argb(56, 31, 31, 31);
-
+    // Background paint
     final Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG);
     bg.setColor(bgColor);
     bg.setStyle(Paint.Style.FILL);
-    // Shadow: offset (0,2), blur ~6, alpha 0.25 black
     bg.setShadowLayer(6f, 0f, 2f, Color.argb(64, 0, 0, 0));
 
-    // Draw bubble
-    canvas.drawRoundRect(
-      bgLeft,
-      bgTop,
-      bgRight,
-      bgBottom,
-      cornerRadius,
-      cornerRadius,
-      bg
-    );
+    float nextTop = margin;
 
-    // Text origin (like iOS: top-left inside padding)
-    final float textX = bgLeft + paddingH;
-    final float textY = bgTop + paddingV - fm.ascent; // convert top-left to baseline
+    // Helper to draw a pill aligned to the top-right, returns the bottom Y used
+    java.util.function.BiFunction<String, Float, Float> drawPill = (
+      label,
+      top
+    ) -> {
+      if (label == null || label.isEmpty()) return top;
+      float textW = text.measureText(label);
+      float bgW = textW + paddingH * 2f;
+      float bgH = lineHeight + paddingV * 2f;
 
-    // High-quality rendering akin to iOS flags
-    text.setFilterBitmap(true);
-    text.setHinting(Paint.HINTING_ON);
+      float left = Math.max(0, bmp.getWidth() - bgW - margin);
+      float right = left + bgW;
+      float bottom = top + bgH;
 
-    canvas.drawText(when, textX, textY, text);
+      // Background
+      canvas.drawRoundRect(left, top, right, bottom, corner, corner, bg);
+
+      // Text baseline
+      float textX = left + paddingH;
+      float textY = top + paddingV - fm.ascent; // convert top-left to baseline
+      canvas.drawText(label, textX, textY, text);
+
+      return bottom;
+    };
+
+    // 1) Timestamp (if any)
+    if (when != null && !when.isEmpty()) {
+      nextTop = drawPill.apply(when, nextTop);
+      // add gap below
+      nextTop += gap;
+    }
+
+    // 2) Location (if any)
+    if (where != null && !where.isEmpty()) {
+      // If there was no timestamp drawn, we still start at top margin.
+      // If there was, we use the accumulated nextTop (= bottom + gap).
+      drawPill.apply(
+        where,
+        (when != null && !when.isEmpty()) ? nextTop : margin
+      );
+    }
 
     return bmp;
+  }
+
+  /** Build "yyyy-MM-dd HH:mm:ss" from EXIF, fallback to now. */
+  private String buildTimestampStringFromExif(ExifInterface exif) {
+    final String out = "yyyy-MM-dd HH:mm:ss";
+    try {
+      if (exif != null) {
+        String exifDate = exif.getAttribute(
+          ExifInterface.TAG_DATETIME_ORIGINAL
+        );
+        if (exifDate == null || exifDate.trim().isEmpty()) {
+          exifDate = exif.getAttribute(ExifInterface.TAG_DATETIME);
+        }
+        if (exifDate != null && !exifDate.trim().isEmpty()) {
+          java.text.SimpleDateFormat in = new java.text.SimpleDateFormat(
+            "yyyy:MM:dd HH:mm:ss",
+            java.util.Locale.US
+          );
+          java.util.Date d = in.parse(exifDate);
+          if (d != null) {
+            return new java.text.SimpleDateFormat(
+              out,
+              java.util.Locale.getDefault()
+            ).format(d);
+          }
+        }
+      }
+    } catch (Throwable ignored) {}
+    // Fallback to "now" if EXIF missing/invalid
+    return new java.text.SimpleDateFormat(
+      out,
+      java.util.Locale.getDefault()
+    ).format(new java.util.Date());
+  }
+
+  /** Build "lat, lon" from EXIF GPS. Returns null if absent (so caller can skip). */
+  private String buildLocationStringFromExif(ExifInterface exif) {
+    if (exif == null) return null;
+    try {
+      float[] latLong = new float[2];
+      if (exif.getLatLong(latLong)) {
+        // Keep a compact but readable precision (5 decimals ≈ ~1 m–10 m)
+        String lat = String.format(java.util.Locale.US, "%.5f", latLong[0]);
+        String lon = String.format(java.util.Locale.US, "%.5f", latLong[1]);
+        return lat + ", " + lon;
+      }
+    } catch (Throwable ignored) {}
+    return null; // No EXIF GPS → skip
   }
 
   private int exifToDegrees(int exifOrientation) {

@@ -255,6 +255,13 @@ export interface CameraPreviewPictureOptions {
    * @since 7.17.0
    */
   embedTimestamp?: boolean;
+  /**
+   * If true, the plugin will embed the current location in the top-right corner of the image.
+   * Requires `withExifLocation` to be enabled.
+   * @default false
+   * @since 7.18.0
+   */
+  embedLocation?: boolean;
 }
 
 /** Represents EXIF data extracted from an image. */

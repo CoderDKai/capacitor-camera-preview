@@ -889,7 +889,7 @@ extension CameraController {
         self.updateVideoOrientation()
     }
 
-    func captureImage(width: Int?, height: Int?, quality: Float, gpsLocation: CLLocation?, embedTimestamp: Bool, completion: @escaping (UIImage?, Data?, [AnyHashable: Any]?, Error?) -> Void) {
+    func captureImage(width: Int?, height: Int?, quality: Float, gpsLocation: CLLocation?, embedTimestamp: Bool, embedLocation: Bool, completion: @escaping (UIImage?, Data?, [AnyHashable: Any]?, Error?) -> Void) {
         guard let photoOutput = self.photoOutput else {
             completion(nil, nil, nil, NSError(domain: "Camera", code: 0, userInfo: [NSLocalizedDescriptionKey: "Photo output is not available"]))
             return
@@ -973,10 +973,21 @@ extension CameraController {
                 print("[CameraPreview] Applied aspect ratio cropping for \(aspectRatio): \(finalImage.size.width)x\(finalImage.size.height)")
             }
 
-            // Embed timestamp if requested
-            if embedTimestamp {
-                let when = self.makeTimestampString(from: photoData, metadata: metadata)
-                finalImage = self.drawTimestamp(text: when, on: finalImage)
+            // Draw overlays if either flag is set (timestamp and/or location)
+            if embedTimestamp || embedLocation {
+                let when: String? = embedTimestamp
+                    ? self.makeTimestampString(from: photoData, metadata: metadata)
+                    : nil
+
+                let whereStr: String? = embedLocation
+                    ? self.makeLocationString(from: gpsLocation, photoData: photoData, metadata: metadata)
+                    : nil
+
+                if (when?.isEmpty != false) && (whereStr?.isEmpty != false) {
+                    // Nothing to draw (e.g., embedLocation=true but no GPS present) → skip
+                } else {
+                    finalImage = self.drawTimestampAndLocation(on: finalImage, when: when, where: whereStr)
+                }
             }
 
             completion(finalImage, photoData, metadata, nil)
@@ -991,42 +1002,24 @@ extension CameraController {
         photoOutput.capturePhoto(with: settings, delegate: self)
     }
 
-    /// Draws a timestamp bubble at the top-right of the image and returns a new image.
-    func drawTimestamp(text: String, on image: UIImage) -> UIImage {
-        let textColor: UIColor = .white
-        // Slightly lighter/clearer than before (matches iOS feel better)
-        let backgroundColor: UIColor = UIColor(white: 0.12, alpha: 0.22)
-        let paddingH: CGFloat = 16    // horizontal
-        let paddingV: CGFloat = 10    // vertical
-        let cornerRadius: CGFloat = 10
-        let drawsShadow = true
-
+    /// Draws timestamp and/or location pills at the top-right. Pass nil to skip either line.
+    func drawTimestampAndLocation(on image: UIImage, when: String?, where whereStr: String?) -> UIImage {
         let base = image.fixedOrientation() ?? image
         let scale = base.scale
         let size  = base.size
 
-        // ≈3.5% of image width (clamped to ≥10pt)
-        let fontPointSize: CGFloat = max(10, size.width * 0.035)
-        // San Francisco system font is what the Camera/Photos overlays use
+        // Style (match drawTimestamp)
+        let textColor: UIColor = .white
+        let backgroundColor = UIColor(white: 0.12, alpha: 0.22)
+        let paddingH: CGFloat = 16
+        let paddingV: CGFloat = 10
+        let cornerRadius: CGFloat = 10
+        let margin: CGFloat = 12
+        let gap: CGFloat = 8
+
+        // ≈3.5% of image width (≥10pt)
+        let fontPointSize = max(10, size.width * 0.035)
         let font: UIFont = .systemFont(ofSize: fontPointSize, weight: .semibold)
-
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .foregroundColor: textColor
-        ]
-        let textSize = (text as NSString).size(withAttributes: attrs)
-
-        // Bubble rect (top-right)
-        let bgSize  = CGSize(width: textSize.width + paddingH * 2,
-                             height: textSize.height + paddingV * 2)
-        let margin: CGFloat = 12 // distance from edges of the photo
-        let bgOrigin = CGPoint(x: size.width - bgSize.width - margin,
-                               y: margin)
-        let bgRect = CGRect(origin: bgOrigin, size: bgSize)
-
-        // Text origin inside bubble
-        let textOrigin = CGPoint(x: bgRect.minX + paddingH,
-                                 y: bgRect.minY + paddingV)
 
         let format = UIGraphicsImageRendererFormat.default()
         format.scale = scale
@@ -1035,32 +1028,46 @@ extension CameraController {
         return UIGraphicsImageRenderer(size: size, format: format).image { ctx in
             base.draw(in: CGRect(origin: .zero, size: size))
 
-            // Bubble
-            let bubblePath = UIBezierPath(roundedRect: bgRect, cornerRadius: cornerRadius)
-            if drawsShadow {
+            func drawPill(_ text: String, top: CGFloat) -> CGFloat {
+                let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: textColor]
+                let textSize = (text as NSString).size(withAttributes: attrs)
+                let bgSize  = CGSize(width: textSize.width + paddingH * 2,
+                                     height: textSize.height + paddingV * 2)
+                let origin  = CGPoint(x: size.width - bgSize.width - margin, y: top)
+                let rect    = CGRect(origin: origin, size: bgSize)
+
+                // shadowed rounded bg
+                let path = UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius)
                 ctx.cgContext.saveGState()
                 ctx.cgContext.setShadow(offset: CGSize(width: 0, height: 2),
                                         blur: 6,
                                         color: UIColor.black.withAlphaComponent(0.25).cgColor)
                 backgroundColor.setFill()
-                bubblePath.fill()
+                path.fill()
                 ctx.cgContext.restoreGState()
-            } else {
-                backgroundColor.setFill()
-                bubblePath.fill()
+
+                // high-quality text
+                let g = ctx.cgContext
+                g.setAllowsAntialiasing(true)
+                g.setShouldAntialias(true)
+                g.setAllowsFontSmoothing(true)
+                g.setShouldSmoothFonts(true)
+                g.setShouldSubpixelPositionFonts(true)
+                g.interpolationQuality = .high
+
+                (text as NSString).draw(at: CGPoint(x: rect.minX + paddingH, y: rect.minY + paddingV),
+                                        withAttributes: attrs)
+
+                return rect.maxY
             }
 
-            // High-quality text rendering
-            let g = ctx.cgContext
-            g.setAllowsAntialiasing(true)
-            g.setShouldAntialias(true)
-            g.setAllowsFontSmoothing(true)
-            g.setShouldSmoothFonts(true)
-            g.setShouldSubpixelPositionFonts(true)
-            g.interpolationQuality = .high
-
-            // Single pass: fill only (no stroke/outline)
-            (text as NSString).draw(at: textOrigin, withAttributes: attrs)
+            var top = margin
+            if let w = when, !w.isEmpty {
+                top = drawPill(w, top: top) + gap
+            }
+            if let loc = whereStr, !loc.isEmpty {
+                _ = drawPill(loc, top: (top == margin ? margin : top))
+            }
         }
     }
 
@@ -1102,6 +1109,44 @@ extension CameraController {
         }
 
         return outFmt.string(from: Date())
+    }
+
+    func makeLocationString(from location: CLLocation?,
+                            photoData: Data?,
+                            metadata: [AnyHashable: Any]?) -> String? {
+        // 1) Prefer the explicit CLLocation that was just provided
+        if let loc = location {
+            let lat = String(format: "%.5f", loc.coordinate.latitude)
+            let lon = String(format: "%.5f", loc.coordinate.longitude)
+            return "\(lat), \(lon)"
+        }
+
+        // 2) Fall back to EXIF GPS in metadata / photo data
+        func extractGPS(_ meta: [String: Any]) -> (Double, Double)? {
+            guard let gps = meta[kCGImagePropertyGPSDictionary as String] as? [String: Any] else { return nil }
+            if let lat = gps[kCGImagePropertyGPSLatitude as String] as? Double,
+               let latRef = gps[kCGImagePropertyGPSLatitudeRef as String] as? String,
+               let lon = gps[kCGImagePropertyGPSLongitude as String] as? Double,
+               let lonRef = gps[kCGImagePropertyGPSLongitudeRef as String] as? String {
+                let signedLat = (latRef.uppercased() == "S") ? -lat : lat
+                let signedLon = (lonRef.uppercased() == "W") ? -lon : lon
+                return (signedLat, signedLon)
+            }
+            return nil
+        }
+
+        if let md = metadata as? [String: Any], let (lat, lon) = extractGPS(md) {
+            return String(format: "%.5f, %.5f", lat, lon)
+        }
+
+        if let data = photoData,
+           let src = CGImageSourceCreateWithData(data as CFData, nil),
+           let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [String: Any],
+           let (lat, lon) = extractGPS(props) {
+            return String(format: "%.5f, %.5f", lat, lon)
+        }
+
+        return nil
     }
 
     // Create JPEG data from `image`, merging the original EXIF/GPS/etc. and forcing Orientation=1.

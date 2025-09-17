@@ -856,12 +856,13 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDelega
         let saveToGallery = call.getBool("saveToGallery", false)
         let withExifLocation = call.getBool("withExifLocation", false)
         let embedTimestamp = call.getBool("embedTimestamp", false) ?? false
+        let embedLocation = call.getBool("embedLocation", false) ?? false
         let width = call.getInt("width")
         let height = call.getInt("height")
 
         print("[CameraPreview] Raw parameter values - width: \(String(describing: width)), height: \(String(describing: height))")
 
-        print("[CameraPreview] Capture params - quality: \(quality), saveToGallery: \(saveToGallery), withExifLocation: \(withExifLocation), embedTimestamp: \(embedTimestamp), width: \(width ?? -1), height: \(height ?? -1)")
+        print("[CameraPreview] Capture params - quality: \(quality), saveToGallery: \(saveToGallery), withExifLocation: \(withExifLocation), embedTimestamp: \(embedTimestamp), embedLocation: \(embedLocation), width: \(width ?? -1), height: \(height ?? -1)")
         print("[CameraPreview] Current location: \(self.currentLocation?.description ?? "nil")")
         // Safely read frame from main thread for logging
         let (previewWidth, previewHeight): (CGFloat, CGFloat) = {
@@ -878,7 +879,7 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDelega
         }()
         print("[CameraPreview] Preview dimensions: \(previewWidth)x\(previewHeight)")
 
-        self.cameraController.captureImage(width: width, height: height, quality: quality, gpsLocation: self.currentLocation, embedTimestamp: embedTimestamp) { (image, originalPhotoData, _, error) in
+        self.cameraController.captureImage(width: width, height: height, quality: quality, gpsLocation: self.currentLocation, embedTimestamp: embedTimestamp, embedLocation: embedLocation) { (image, originalPhotoData, _, error) in
             print("[CameraPreview] captureImage callback received")
             DispatchQueue.main.async {
                 print("[CameraPreview] Processing capture on main thread")
