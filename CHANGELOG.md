@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [7.17.1](https://github.com/Cap-go/capacitor-camera-preview/compare/7.17.0...7.17.1) (2025-09-17)
+
+
+### Bug Fixes
+
+* update macOS version for iOS build job ([f785bfd](https://github.com/Cap-go/capacitor-camera-preview/commit/f785bfddceb034ceb92e5f2ad00fc2f6052b2c12))
+
 ## [7.17.0](https://github.com/Cap-go/capacitor-camera-preview/compare/7.16.5...7.17.0) (2025-09-16)
 
 
