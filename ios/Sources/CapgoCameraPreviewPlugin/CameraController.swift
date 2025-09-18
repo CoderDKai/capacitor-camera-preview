@@ -983,7 +983,7 @@ extension CameraController {
                     ? self.makeLocationString(from: gpsLocation, photoData: photoData, metadata: metadata)
                     : nil
 
-                if (when?.isEmpty != false) && (whereStr?.isEmpty != false) {
+                if (when?.isEmpty ?? true) && (whereStr?.isEmpty ?? true) {
                     // Nothing to draw (e.g., embedLocation=true but no GPS present) → skip
                 } else {
                     finalImage = self.drawTimestampAndLocation(on: finalImage, when: when, where: whereStr)
