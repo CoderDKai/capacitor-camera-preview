@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [7.18.0](https://github.com/Cap-go/capacitor-camera-preview/compare/7.17.1...7.18.0) (2025-09-18)
+
+
+### Features
+
+* add `embedLocation` option to overlay capture time on images ([1295419](https://github.com/Cap-go/capacitor-camera-preview/commit/1295419daeeeaf647e35e3ce06a32f253c2024a4))
+* embed location in photo (example app updates) ([ab0f518](https://github.com/Cap-go/capacitor-camera-preview/commit/ab0f518225a854a08fc249849289bd990fd038a9))
+
 ## [7.17.1](https://github.com/Cap-go/capacitor-camera-preview/compare/7.17.0...7.17.1) (2025-09-17)
 
 
