@@ -478,6 +478,7 @@ export class CameraModalComponent implements OnInit, OnDestroy {
         quality,
         saveToGallery: this.saveToGallery(),
         withExifLocation: this.withExifLocation(),
+        embedLocation: this.withExifLocation(),
       };
       if (format === 'png') {
         captureOptions = { ...captureOptions, ...{ format } };
