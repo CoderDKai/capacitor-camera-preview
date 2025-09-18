@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [7.19.0](https://github.com/Cap-go/capacitor-camera-preview/compare/7.18.0...7.19.0) (2025-09-18)
+
+
+### Features
+
+* enhance CI workflow with linting and updated Java setup ([7fb04b5](https://github.com/Cap-go/capacitor-camera-preview/commit/7fb04b516581317c6740fa6bc5e9cd6c1d5ad83d))
+
 ## [7.18.0](https://github.com/Cap-go/capacitor-camera-preview/compare/7.17.1...7.18.0) (2025-09-18)
 
 
