@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [7.20.0](https://github.com/Cap-go/capacitor-camera-preview/compare/7.19.0...7.20.0) (2025-09-18)
+
+
+### Features
+
+* reorganize build steps in CI workflow for clarity and consistency ([21d6d01](https://github.com/Cap-go/capacitor-camera-preview/commit/21d6d01c0e697d33d9b75e2e5b435bc39ccb11a5))
+
 ## [7.19.0](https://github.com/Cap-go/capacitor-camera-preview/compare/7.18.0...7.19.0) (2025-09-18)
 
 
