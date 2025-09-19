@@ -889,7 +889,7 @@ extension CameraController {
         self.updateVideoOrientation()
     }
 
-    func captureImage(width: Int?, height: Int?, quality: Float, gpsLocation: CLLocation?, embedTimestamp: Bool, embedLocation: Bool, completion: @escaping (UIImage?, Data?, [AnyHashable: Any]?, Error?) -> Void) {
+    func captureImage(width: Int?, height: Int?, quality: Float, gpsLocation: CLLocation?, embedTimestamp: Bool, embedLocation: Bool, photoQualityPrioritization: String, completion: @escaping (UIImage?, Data?, [AnyHashable: Any]?, Error?) -> Void) {
         guard let photoOutput = self.photoOutput else {
             completion(nil, nil, nil, NSError(domain: "Camera", code: 0, userInfo: [NSLocalizedDescriptionKey: "Photo output is not available"]))
             return
@@ -901,8 +901,14 @@ extension CameraController {
         let shouldUseHighRes = width.map { $0 > 1920 } ?? false || height.map { $0 > 1920 } ?? false
         settings.isHighResolutionPhotoEnabled = shouldUseHighRes
         if #available(iOS 15.0, *) {
-            // Prioritize speed over quality
-            settings.photoQualityPrioritization = .speed
+            if photoQualityPrioritization == "quality" {
+                settings.photoQualityPrioritization = .quality
+            } else if photoQualityPrioritization == "balanced" {
+                settings.photoQualityPrioritization = .balanced
+            } else {
+                // Default Prioritize speed over quality
+                settings.photoQualityPrioritization = .speed
+            }
         }
 
         // Apply the current flash mode to the photo settings

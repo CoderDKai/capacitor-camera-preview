@@ -860,6 +860,7 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDelega
         let effectiveEmbedLocation = (withExifLocation ?? false) && embedLocationRequested
         let width = call.getInt("width")
         let height = call.getInt("height")
+        let photoQualityPrioritization = call.getString("photoQualityPrioritization", "speed")
 
         print("[CameraPreview] Raw parameter values - width: \(String(describing: width)), height: \(String(describing: height))")
 
@@ -881,7 +882,7 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDelega
         print("[CameraPreview] Preview dimensions: \(previewWidth)x\(previewHeight)")
 
         let gpsForThisCapture = (withExifLocation ?? false) ? self.currentLocation : nil
-        self.cameraController.captureImage(width: width, height: height, quality: quality, gpsLocation: gpsForThisCapture, embedTimestamp: embedTimestamp, embedLocation: effectiveEmbedLocation) { (image, originalPhotoData, _, error) in
+        self.cameraController.captureImage(width: width, height: height, quality: quality, gpsLocation: gpsForThisCapture, embedTimestamp: embedTimestamp, embedLocation: effectiveEmbedLocation, photoQualityPrioritization: photoQualityPrioritization) { (image, originalPhotoData, _, error) in
             print("[CameraPreview] captureImage callback received")
             DispatchQueue.main.async {
                 print("[CameraPreview] Processing capture on main thread")

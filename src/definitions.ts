@@ -262,6 +262,18 @@ export interface CameraPreviewPictureOptions {
    * @since 7.18.0
    */
   embedLocation?: boolean;
+  /**
+   * Sets the priority for photo quality vs. capture speed.
+   * - "speed": Prioritizes faster capture times, may reduce image quality.
+   * - "balanced": Aims for a balance between quality and speed.
+   * - "quality": Prioritizes image quality, may reduce capture speed.
+   * See https://developer.apple.com/documentation/avfoundation/avcapturephotosettings/photoqualityprioritization for details.
+   *
+   * @since 7.21.0
+   * @platform ios
+   * @default "speed"
+   */
+  photoQualityPrioritization?: "speed" | "balanced" | "quality";
 }
 
 /** Represents EXIF data extracted from an image. */
