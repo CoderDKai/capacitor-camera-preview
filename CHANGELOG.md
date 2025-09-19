@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [7.21.0](https://github.com/Cap-go/capacitor-camera-preview/compare/7.20.0...7.21.0) (2025-09-19)
+
+
+### Features
+
+* add photoQualityPrioritization capture option for ios ([8509c97](https://github.com/Cap-go/capacitor-camera-preview/commit/8509c9769db925d1ee2c32bcb0e054cb38556345))
+
 ## [7.20.0](https://github.com/Cap-go/capacitor-camera-preview/compare/7.19.0...7.20.0) (2025-09-18)
 
 
