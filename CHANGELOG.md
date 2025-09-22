@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [7.21.2](https://github.com/Cap-go/capacitor-camera-preview/compare/7.21.1...7.21.2) (2025-09-22)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @capacitor/keyboard to v7.0.3 ([#238](https://github.com/Cap-go/capacitor-camera-preview/issues/238)) ([97b2d1d](https://github.com/Cap-go/capacitor-camera-preview/commit/97b2d1ddb3ff2e14b76c833947adf5c86743697a))
+
 ## [7.21.1](https://github.com/Cap-go/capacitor-camera-preview/compare/7.21.0...7.21.1) (2025-09-22)
 
 ## [7.21.0](https://github.com/Cap-go/capacitor-camera-preview/compare/7.20.0...7.21.0) (2025-09-19)
