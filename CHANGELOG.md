@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [7.21.3](https://github.com/Cap-go/capacitor-camera-preview/compare/7.21.2...7.21.3) (2025-09-25)
+
+
+### Bug Fixes
+
+* doc ([ea3a365](https://github.com/Cap-go/capacitor-camera-preview/commit/ea3a365ce903273139f0a970869d0e65713ff43e))
+
 ## [7.21.2](https://github.com/Cap-go/capacitor-camera-preview/compare/7.21.1...7.21.2) (2025-09-22)
 
 
