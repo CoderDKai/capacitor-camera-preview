@@ -621,6 +621,11 @@ extension CameraController {
                     finalDevice.exposurePointOfInterest = CGPoint(x: 0.5, y: 0.5)
                 }
             }
+            // Reset exposure compensation so sessions start neutral
+            let minBias = finalDevice.minExposureTargetBias
+            let maxBias = finalDevice.maxExposureTargetBias
+            let neutralBias = max(minBias, min(0.0, maxBias))
+            finalDevice.setExposureTargetBias(neutralBias) { _ in }
             finalDevice.unlockForConfiguration()
         } catch {
             // Non-fatal; continue without setting default exposure

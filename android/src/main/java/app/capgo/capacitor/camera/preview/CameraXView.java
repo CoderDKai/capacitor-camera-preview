@@ -932,6 +932,8 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
           );
         }
 
+        resetExposureCompensationToDefault();
+
         // Log details about the active camera
         Log.d(TAG, "Use cases bound. Inspecting active camera and use cases.");
         CameraInfo cameraInfo = camera.getCameraInfo();
@@ -2589,6 +2591,29 @@ public class CameraXView implements LifecycleOwner, LifecycleObserver {
     if (idx < idxRange.getLower()) idx = idxRange.getLower();
     if (idx > idxRange.getUpper()) idx = idxRange.getUpper();
     camera.getCameraControl().setExposureCompensationIndex(idx);
+  }
+
+  private void resetExposureCompensationToDefault() {
+    if (camera == null) {
+      return;
+    }
+    try {
+      ExposureState state = camera.getCameraInfo().getExposureState();
+      Range<Integer> range = state.getExposureCompensationRange();
+      int neutralIdx = 0;
+      if (!range.contains(0)) {
+        int lower = range.getLower();
+        int upper = range.getUpper();
+        neutralIdx = Math.abs(lower) <= Math.abs(upper) ? lower : upper;
+      }
+      camera.getCameraControl().setExposureCompensationIndex(neutralIdx);
+    } catch (Exception e) {
+      Log.w(
+        TAG,
+        "resetExposureCompensationToDefault: Failed to reset exposure compensation",
+        e
+      );
+    }
   }
 
   private long showFocusIndicator(float x, float y) {
