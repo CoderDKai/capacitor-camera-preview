@@ -602,10 +602,12 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDelega
 
                     DispatchQueue.main.async {
                         UIDevice.current.beginGeneratingDeviceOrientationNotifications()
-                        NotificationCenter.default.addObserver(self,
-                                                               selector: #selector(self.handleOrientationChange),
-                                                               name: UIDevice.orientationDidChangeNotification,
-                                                               object: nil)
+                        if self.rotateWhenOrientationChanged == true {
+                            NotificationCenter.default.addObserver(self,
+                                                                   selector: #selector(self.handleOrientationChange),
+                                                                   name: UIDevice.orientationDidChangeNotification,
+                                                                   object: nil)
+                        }
                         self.completeStartCamera(call: call)
                     }
                 }
